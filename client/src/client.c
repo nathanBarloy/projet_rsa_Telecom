@@ -79,7 +79,33 @@ int connexion(char *addIp, int port) {
 }
 
 
+int menuPrincipal(char *addIp, int port) {
+  char answer;
+  int cont = 0;
+  while (!cont) {
+    printf("\nBienvenue sur le Twitter du pauvre ! Que voulez vous faire ?\nc -> connexion\nn -> créer un nouveau compte\nq -> quitter l'application\nVotre choix : ");
+    scanf("%c",&answer);
+    if (answer && (answer=='c' || answer=='n' || answer=='q')) {
+      cont = 1;
+    }
+  }
+  switch (answer) {
+    case 'c' :
+      printf("connexion\n");
+      connexion(addIp,port);
+      break;
+    case 'n' :
+      printf("nouveau\n");
+      break;
+    case 'q' :
+      printf("quitter\n");
+      exit(0);
+      break;
+  }
 
+  return 0;
+  
+}
 
 
 int main(int argc, char **argv){
@@ -87,7 +113,23 @@ int main(int argc, char **argv){
   char *addIp = "127.0.0.1";
   int port = 8080;
 
-	connexion(addIp, port);
+  switch (argc) {
+    case 1 :
+      break;
+    case 2 :
+      addIp = argv[1];
+      break;
+    case 3 :
+      addIp = argv[1];
+      port = atoi(argv[2]);
+      break;
+    default :
+      printf("Trop d'arguments\n");
+      exit(1);
+  }
+
+  menuPrincipal(addIp, port);
+  
   return 0;
 }
 
