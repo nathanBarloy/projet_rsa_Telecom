@@ -8,14 +8,18 @@
 #include <errno.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <termios.h>
 
+#define _XOPEN_SOURCE 600
 #define MAXLINE 80
+#define TAILLEMAX 20
 
 /*
 Serveur TCP :
 
 Socket => Bind => Listen => Accept => Exchange (reader/writer) => Close
 */
+
 
 void usage(){
 	printf("usage : clieecho adresse_ip_server numero_port_serveur \n");
@@ -125,7 +129,7 @@ int connexion(char *addIp, int port) {
   char fromUser[MAXLINE];
   struct hostent *hp;
 
-//on remplis la structure serv_addre avec l'adresse du serveur
+//on remplis la structure serv_addr avec l'adresse du serveur
   bzero((char *) &serv_addr, sizeof(serv_addr));
   serv_addr.sin_family = AF_INET;
   int portno = port;
@@ -178,6 +182,8 @@ int connexion(char *addIp, int port) {
 
 int menuPrincipal(char *addIp, int port) {
   char answer;
+  char name[TAILLEMAX];
+  char password[TAILLEMAX];
   int cont = 0;
   while (!cont) {
     printf("\nBienvenue sur le Twitter du pauvre ! Que voulez vous faire ?\nc -> connexion\nn -> créer un nouveau compte\nq -> quitter l'application\nVotre choix : ");
@@ -188,7 +194,14 @@ int menuPrincipal(char *addIp, int port) {
   }
   switch (answer) {
     case 'c' :
-      printf("connexion\n");
+      
+      printf("Nom d'utilisateur : ");
+      fflush(stdout);
+      scanf("%s", name);
+      fflush(stdout);
+      printf("Mot de passe : ");
+      fflush(stdout);
+      scanf("%s", password);
       connexion(addIp,port);
       break;
     case 'n' :

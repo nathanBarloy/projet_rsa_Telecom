@@ -25,3 +25,5 @@ clean :
 
 mrproper :
 	rm -rf $(EXEC)
+
+.PHONY : client
