@@ -21,6 +21,114 @@ Socket => Bind => Listen => Accept => Exchange (reader/writer) => Close
 */
 
 
+
+int compter_thematiques(char *texte) {
+  int nbThematique = 0;
+  int dansUnTheme=0;
+  int tailleTheme=0;
+  int i = -1;
+  char c;
+
+  do {
+
+    i++;
+      c = texte[i];
+
+    switch(c) {
+
+      case '#' :
+        nbThematique++;
+          dansUnTheme = 1;
+          tailleTheme = 0;
+          break;
+
+        case ' ' :
+
+        case '\0' :
+          if (dansUnTheme) {
+            dansUnTheme = 0;
+            //printf("debut : %d et taille : %d\n", debutTheme,tailleTheme);
+            if (tailleTheme==0) {
+              nbThematique--;
+            }
+          }
+          break;
+
+        default :
+          if (dansUnTheme) {
+            tailleTheme++;
+          }
+          break;
+
+      } 
+
+      
+    } while (c!='\0');
+
+    return nbThematique;
+}
+
+char **recherche_thematiques(char *texte) {
+  /*cette fonction sert à extraire les thematiques d'un tweet*/
+
+  int nbThematique = compter_thematiques(texte);
+
+  char **res = malloc(sizeof(char*)*nbThematique);
+  int dansUnTheme=0;
+  int tailleTheme=0;
+  int debutTheme=0;
+  int i = -1;
+  char c;
+  char *newTheme;
+  int numTheme = 0;
+
+  do {
+
+    i++;
+      c = texte[i];
+
+    switch(c) {
+
+      case '#' :
+        numTheme++;
+          dansUnTheme = 1;
+          debutTheme = i+1;
+          tailleTheme = 0;
+          break;
+
+        case ' ' :
+
+        case '\0' :
+          if (dansUnTheme) {
+            dansUnTheme = 0;
+            //printf("debut : %d et taille : %d\n", debutTheme,tailleTheme);
+            if (tailleTheme==0) {
+              numTheme--;
+            } else {
+              newTheme = malloc(sizeof(char)*(tailleTheme+1));
+              strncpy(newTheme,texte+debutTheme, tailleTheme);
+              //printf("%s\n", newTheme);
+              res[numTheme-1] = newTheme;
+            }
+          }
+          break;
+
+        default :
+          if (dansUnTheme) {
+            tailleTheme++;
+          }
+          break;
+
+      } 
+
+      
+    } while (c!='\0');
+    return res;
+}
+
+
+
+
 void usage(){
 	printf("usage : clieecho adresse_ip_server numero_port_serveur \n");
 }
@@ -123,6 +231,8 @@ int readline (fd, ptr, maxlen)
 
 
 int connexion(char *addIp, int port) {
+  /*se connecte au serveur situé à l'adresse désignée par les paramètres*/
+
   int serverSocket,servlen,n,retread;
   struct sockaddr_in serv_addr;
   char fromServer[MAXLINE];
@@ -150,11 +260,13 @@ int connexion(char *addIp, int port) {
     perror("erreur socket");
     exit(1);
   }
+  printf("socket ok\n");
   
   if(connect(serverSocket,(struct sockaddr *) &serv_addr,sizeof(serv_addr))<0){
     perror("erreur connect");
     exit(1);
   }
+  printf("connect ok\n");
 
   while((retread=readline(serverSocket,fromServer,MAXLINE))>0){
     printf("corr : %s", fromServer);
@@ -181,6 +293,8 @@ int connexion(char *addIp, int port) {
 
 
 int menuPrincipal(char *addIp, int port) {
+  /* lance le menu principal de l'appli
+  */
   char answer;
   char name[TAILLEMAX];
   char password[TAILLEMAX];
@@ -228,11 +342,11 @@ int main(int argc, char **argv){
     case 1 :
       break;
     case 2 :
-      addIp = argv[1];
+      port = atoi(argv[1]);
       break;
     case 3 :
-      addIp = argv[1];
-      port = atoi(argv[2]);
+      port = atoi(argv[1]);
+      addIp = argv[2];
       break;
     default :
       printf("Trop d'arguments\n");
