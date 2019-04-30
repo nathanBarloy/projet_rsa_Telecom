@@ -90,6 +90,18 @@ char **recherche_thematiques(char *texte) {
     switch(c) {
 
       case '#' :
+        if (dansUnTheme) {
+          dansUnTheme = 0;
+            //printf("debut : %d et taille : %d\n", debutTheme,tailleTheme);
+            if (tailleTheme==0) {
+              numTheme--;
+            } else {
+              newTheme = malloc(sizeof(char)*(tailleTheme+1));
+              strncpy(newTheme,texte+debutTheme, tailleTheme);
+              //printf("%s\n", newTheme);
+              res[numTheme-1] = newTheme;
+            }
+        }
         numTheme++;
           dansUnTheme = 1;
           debutTheme = i+1;
