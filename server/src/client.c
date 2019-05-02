@@ -7,7 +7,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-const int RECV_BUFF_LEN = 256;
+#define RECV_BUFF_LEN 256
 
 int main(int argc, char* argv[]) {
     /* Création d'une socket */
@@ -30,15 +30,38 @@ int main(int argc, char* argv[]) {
     }
     /* Échange de données */
     char* recv_buff = malloc(RECV_BUFF_LEN * sizeof(char));
-    char* send_buff = "TAC";
-     while (recv(serverSocket, recv_buff, RECV_BUFF_LEN * sizeof(char), 0) > 0) {
-        printf("%s\n", recv_buff);
+    char* send_buff = malloc(5 * sizeof(char));
+	send_buff[0] = 3;
+	strcpy(&send_buff[1], "TIC");
+    int times = 10;
+    while (times--) {
         sleep(1);
-        if (!~send(serverSocket, send_buff, strlen(send_buff) * sizeof(char), 0)) {
+        if (send(serverSocket, send_buff, (strlen(&send_buff[1]) + 2) * sizeof(char), 0) < 2) {
             perror("Client echo: send error\n");
             return 4;
         }
+        do {
+            if (recv(serverSocket, recv_buff, RECV_BUFF_LEN * sizeof(char), 0) < 2) {
+                perror("Client echo: recv error\n");
+                return 5;
+            }
+        } while (recv_buff[0] != 3);
+        printf("%s\n", &recv_buff[1]);
     }
+	send_buff[0] = 2;
+	send_buff[1] = '\0';
+    if (send(serverSocket, send_buff, (strlen(&send_buff[1]) + 2) * sizeof(char), 0) < 2) {
+        perror("Client echo: send error\n");
+        return 4;
+    }
+    do {
+        if (recv(serverSocket, recv_buff, RECV_BUFF_LEN * sizeof(char), 0) < 2) {
+            perror("Client echo: recv error\n");
+            return 5;
+        }
+    } while (recv_buff[0] != 2);
+    printf("%s\n", &recv_buff[1]);
+    free(send_buff);
     /* Fermeture d'un socket */
     close(serverSocket);
     free(recv_buff);
