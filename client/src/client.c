@@ -378,9 +378,16 @@ int menuPrincipal(char *addIp, int port) {
   char answer;
   char name[TAILLEMAX];
   char password[TAILLEMAX];
+  char *animal;
+  char *texte;
+  char commande[TAILLEMAX];
   int cont = 0;
 
-  printf("\nBienvenue sur le Twitter du pauvre ! Que voulez vous faire ?\n");
+  animal = "turkey";
+  texte = "Bienvenue sur le Twitter du pauvre ! Une application au top de la technologie !\n";
+  sprintf(commande, "cowsay -f %s %s",animal, texte);
+  system(commande);
+  printf("\nQue voulez vous faire ?\n");
   while (!cont) {
     printf("c -> connexion\nn -> créer un nouveau compte\nq -> quitter l'application\nVotre choix : ");
     answer = getchar();
