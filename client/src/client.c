@@ -240,6 +240,40 @@ int readline (fd, ptr, maxlen)
   return (retvalue);
 }
 
+int menuConnecte(char *addIp, int port) {
+  char answer;
+  int cont = 0;
+  printf("\nBienvenue sur le Twitter du pauvre ! Que voulez vous faire ?\n");
+  while (!cont) {
+    printf("t -> twitter\nu -> demander la liste des utilisateurs suivis\nv -> demander la liste des utilisateurs qui vous suivent\nh -> demander la liste des thématiques suivies\nd -> déconnexion\nq -> quitter l'application\nVotre choix : ");
+    answer = getchar();
+    if (answer && (answer=='t' || answer=='u' || answer=='v' || answer=='h' || answer=='d' || answer=='q')) {
+      cont = 1;
+    } else {
+      printf("\nVotre entrée n'est pas correcte. Réessayez.\n");
+    }
+    while (getchar()!='\n'); //pour vider la stdin
+  }
+  switch (answer) {
+    case 't' :
+      break;
+    case 'u' :
+      break;
+    case 'v' :
+      break;
+    case 'h' :
+      break;
+    case 'd' :
+      break;
+    case 'q' :
+      printf("quitter\n");
+      exit(0);
+      break;
+  }
+
+  return 0;
+}
+
 
 
 int connexion(char *addIp, int port) {
@@ -311,12 +345,17 @@ int menuPrincipal(char *addIp, int port) {
   char name[TAILLEMAX];
   char password[TAILLEMAX];
   int cont = 0;
+
+  printf("\nBienvenue sur le Twitter du pauvre ! Que voulez vous faire ?\n");
   while (!cont) {
-    printf("\nBienvenue sur le Twitter du pauvre ! Que voulez vous faire ?\nc -> connexion\nn -> créer un nouveau compte\nq -> quitter l'application\nVotre choix : ");
-    scanf("%c",&answer);
+    printf("c -> connexion\nn -> créer un nouveau compte\nq -> quitter l'application\nVotre choix : ");
+    answer = getchar();
     if (answer && (answer=='c' || answer=='n' || answer=='q')) {
       cont = 1;
+    } else {
+      printf("\nVotre entrée n'est pas correcte. Réessayez.\n");
     }
+    while (getchar()!='\n'); //pour vider la stdin
   }
   switch (answer) {
     case 'c' :
