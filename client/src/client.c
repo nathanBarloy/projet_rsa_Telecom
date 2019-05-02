@@ -11,7 +11,7 @@
 #include <termios.h>
 
 #define _XOPEN_SOURCE 600
-#define MAXLINE 80
+#define MAXLINE 1024
 #define TAILLEMAX 20
 
 /*
@@ -139,6 +139,14 @@ char **recherche_thematiques(char *texte) {
 }
 
 
+void viderBuffer()
+{
+    int c = 0;
+    while (c != '\n' && c != EOF)
+    {
+        c = getchar();
+    }
+}
 
 
 void usage(){
@@ -243,7 +251,7 @@ int readline (fd, ptr, maxlen)
 int menuConnecte(char *addIp, int port) {
   char answer;
   int cont = 0;
-  printf("\nBienvenue sur le Twitter du pauvre ! Que voulez vous faire ?\n");
+  printf("\nQue voulez vous faire ?\n");
   while (!cont) {
     printf("t -> twitter\nu -> demander la liste des utilisateurs suivis\nv -> demander la liste des utilisateurs qui vous suivent\nh -> demander la liste des thématiques suivies\nd -> déconnexion\nq -> quitter l'application\nVotre choix : ");
     answer = getchar();
@@ -252,7 +260,7 @@ int menuConnecte(char *addIp, int port) {
     } else {
       printf("\nVotre entrée n'est pas correcte. Réessayez.\n");
     }
-    while (getchar()!='\n'); //pour vider la stdin
+    viderBuffer();
   }
   switch (answer) {
     case 't' :
@@ -278,11 +286,12 @@ int menuConnecte(char *addIp, int port) {
 
 int connexion(char *addIp, int port) {
   /*se connecte au serveur situé à l'adresse désignée par les paramètres*/
-
-  int serverSocket,servlen,n,retread;
+  int continuer = 1; //booleen qui indique si la boucle doit se finir ou non
+  int serverSocket,servlen,n;
+  fd_set readfds;
   struct sockaddr_in serv_addr;
-  char fromServer[MAXLINE];
-  char fromUser[MAXLINE];
+  char bufServ[MAXLINE];
+  char bufUser[MAXLINE];
   struct hostent *hp;
 
 //on remplis la structure serv_addr avec l'adresse du serveur
@@ -296,7 +305,7 @@ int connexion(char *addIp, int port) {
     exit(0);
   }
   serv_addr.sin_addr = *((struct in_addr *)(hp->h_addr));
-  printf("IP address :%s\n",inet_ntoa(serv_addr.sin_addr));
+  //printf("IP address :%s\n",inet_ntoa(serv_addr.sin_addr));
   
   /*
   ouvrire socket (socket stream)
@@ -306,32 +315,57 @@ int connexion(char *addIp, int port) {
     perror("erreur socket");
     exit(1);
   }
-  printf("socket ok\n");
+  //printf("socket ok\n");
   
   if(connect(serverSocket,(struct sockaddr *) &serv_addr,sizeof(serv_addr))<0){
     perror("erreur connect");
     exit(1);
   }
-  printf("connect ok\n");
+  //printf("connect ok\n");
 
-  while((retread=readline(serverSocket,fromServer,MAXLINE))>0){
-    printf("corr : %s", fromServer);
-    if(strcmp(fromServer,"Au revoir\n")==0){
-      break;
-    }
-    printf("vous : ");
-    if(fgets(fromUser,MAXLINE,stdin)==NULL){
-      perror("erreur fgets\n");
+  while(continuer){
+
+    memset(bufServ,'\0',MAXLINE);
+    memset(bufUser,'\0',MAXLINE);
+
+    FD_ZERO(&readfds);    // il faut remettre tous les elements des readfds a chaque recommencement de la boucle, vu que select modifie les ensembles
+    FD_SET(0,&readfds);       // on rajoute l'entree standard
+    FD_SET(serverSocket,&readfds);   // on rajoute la socket de communication avec le serveur
+    
+    if(select(serverSocket+1,&readfds,NULL,NULL,NULL) == -1){
+      perror("Erreur lors de l'appel a select -> ");
       exit(1);
     }
-    //Envoyer le message au server
-      if((n=writen(serverSocket,fromUser,strlen(fromUser))) != strlen(fromUser)){   
-      printf("erreur writen");
-      exit(0);
+
+    
+
+    //if (FD_ISSET(0,&readfds)) { //on ecrit dans le stdin
+
+      menuConnecte(addIp, port);
+
+      /*
+      printf("vous : ");
+      if(fgets(bufUser,MAXLINE,stdin)==NULL){
+        perror("erreur fgets\n");
+        exit(1);
+      }
+      //Envoyer le message au server
+        if((n=writen(serverSocket,bufUser,strlen(bufUser))) != strlen(bufUser)){   
+        printf("erreur writen");
+        exit(0);
+      }
+      */
+    //}
+
+    if (FD_ISSET(serverSocket,&readfds)) { //on a recu un message du serveur
+      if (readline(serverSocket,bufServ,MAXLINE)<0) {
+        perror("Erreur de reception");
+        exit(1);
+      }
+      printf("tweet recu  : %s", bufServ);
+      printf("\n");
     }
-  }
-  if(retread <0){
-    perror("erreur readline\n");
+
   }
   close(serverSocket);
   return 0;
@@ -355,18 +389,21 @@ int menuPrincipal(char *addIp, int port) {
     } else {
       printf("\nVotre entrée n'est pas correcte. Réessayez.\n");
     }
-    while (getchar()!='\n'); //pour vider la stdin
+    viderBuffer();
   }
   switch (answer) {
     case 'c' :
       
-      printf("Nom d'utilisateur : ");
+      printf("\nNom d'utilisateur : ");
       fflush(stdout);
       scanf("%s", name);
       fflush(stdout);
       printf("Mot de passe : ");
       fflush(stdout);
+      system("stty -echo");
       scanf("%s", password);
+      system("stty echo");
+      printf("\n%s\n%s\n",name,password);
       connexion(addIp,port);
       break;
     case 'n' :
@@ -387,17 +424,17 @@ int menuPrincipal(char *addIp, int port) {
 int main(int argc, char **argv){
 
   char *addIp = "127.0.0.1";
-  int port = 8080;
+  int port = 2222;
 
   switch (argc) {
     case 1 :
       break;
     case 2 :
-      port = atoi(argv[1]);
+      addIp = argv[1];
       break;
     case 3 :
-      port = atoi(argv[1]);
-      addIp = argv[2];
+      addIp = argv[1];
+      port = atoi(argv[2]);
       break;
     default :
       printf("Trop d'arguments\n");
