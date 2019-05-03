@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
 	}
 	/* Échange de données */
 	char* recv_buff = malloc(RECV_BUFF_LEN * sizeof(char));
-	char* send_buff = malloc(5 * sizeof(char));
+	char* send_buff = malloc(142 * sizeof(char));
 	send_buff[0] = 1;
 	strcpy(&send_buff[1], "TIC@TAC");
 	if (send(serverSocket, send_buff, (strlen(&send_buff[1]) + 2) * sizeof(char), 0) < 2) {
@@ -44,7 +44,8 @@ int main(int argc, char* argv[]) {
 		}
 	} while (recv_buff[0] != 1);
 	printf("%s\n", &recv_buff[1]);
-	send_buff[0] = 3;
+	send_buff[0] = 4;
+	strcpy(&send_buff[1], "TOC");
 	int times = 10;
 	while (times--) {
 		sleep(1);
@@ -54,10 +55,11 @@ int main(int argc, char* argv[]) {
 		}
 		do {
 			if (recv(serverSocket, recv_buff, RECV_BUFF_LEN * sizeof(char), 0) < 2) {
+				printf("[NOT EXPECTED] %s\n", &recv_buff[1]);
 				perror("Client echo: recv error\n");
 				return 5;
 			}
-		} while (recv_buff[0] != 3);
+		} while (recv_buff[0] != 4);
 		printf("%s\n", &recv_buff[1]);
 	}
 	send_buff[0] = 2;

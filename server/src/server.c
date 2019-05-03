@@ -54,27 +54,22 @@ int sign_up(int sockets[], char* users[], int index, char* message) {
 		return response(socket, SIGN_UP, "User already signed in");
 	}
 	if (message[0] == '\0') {
-		response(socket, SIGN_UP, "Neither user name nor password provided");
-		return 0;
+		return response(socket, SIGN_UP, "Neither user name nor password provided");
 	}
 	if (message[0] == '@') {
-		response(socket, SIGN_UP, "No user name provided");
-		return 0;
+		return response(socket, SIGN_UP, "No user name provided");
 	}
 	char* password = strchr(message, '@');
 	if (password == NULL) {
-		response(socket, SIGN_UP, "No password provided");
-		return 0;
+		return response(socket, SIGN_UP, "No password provided");
 	}
 	password[0] = '\0';
 	password = &password[1];
 	if (test_identifier(message)) {
-		response(socket, SIGN_UP, "Invalid user name");
-		return 0;
+		return response(socket, SIGN_UP, "Invalid user name");
 	}
 	if (test_identifier(password)) {
-		response(socket, SIGN_UP, "Invalid password");
-		return 0;
+		return response(socket, SIGN_UP, "Invalid password");
 	}
 	char* home = getpwuid(getuid())->pw_dir;
 	int home_length = strlen(home);
@@ -87,7 +82,7 @@ int sign_up(int sockets[], char* users[], int index, char* message) {
 	strcpy(&path[home_length + 13], message);
 	if (!~mkdir(path, 0700)) {
 		free(path);
-		return response(socket, SIGN_UP, "User name not available") && 0;
+		return response(socket, SIGN_UP, "User name not available");
 	}
 	path[path_length] = '/';
 	strcpy(&path[path_length + 1], "password.txt");
@@ -112,33 +107,28 @@ int sign_in(int sockets[], char* users[], int index, char* message) {
 		return response(socket, SIGN_IN, "User already signed in");
 	}
 	if (message[0] == '\0') {
-		response(socket, SIGN_IN, "Neither user name nor password provided");
-		return 0;
+		return response(socket, SIGN_IN, "Neither user name nor password provided");
 	}
 	if (message[0] == '@') {
-		response(socket, SIGN_IN, "No user name provided");
-		return 0;
+		return response(socket, SIGN_IN, "No user name provided");
 	}
 	char* password = strchr(message, '@');
 	if (password == NULL) {
-		response(socket, SIGN_IN, "No password provided");
-		return 0;
+		return response(socket, SIGN_IN, "No password provided");
 	}
 	password[0] = '\0';
 	password = &password[1];
 	if (test_identifier(message)) {
-		response(socket, SIGN_IN, "Invalid user name");
-		return 0;
+		return response(socket, SIGN_IN, "Invalid user name");
 	}
 	if (test_identifier(password)) {
-		response(socket, SIGN_IN, "Invalid password");
-		return 0;
+		return response(socket, SIGN_IN, "Invalid password");
 	}
 	char* home = getpwuid(getuid())->pw_dir;
 	int home_length = strlen(home);
 	int message_length = strlen(message);
 	int path_length = home_length + 13 + message_length;
-	char* path = malloc((path_length + 15) * sizeof(char));
+	char* path = malloc((path_length + 14) * sizeof(char));
 	strcpy(path, home);
 	strcpy(&path[home_length], "/.my-twitter/");
 	strcpy(&path[home_length + 13], message);
@@ -180,26 +170,73 @@ int tweet(int sockets[], char* users[], int index, char* message) {
 }
 
 int follow_user(int sockets[], char* users[], int index, char* message) {
-	return 0;
+	int socket = sockets[index];
+	char* user = users[index];
+	if (users == NULL) {
+		return response(socket, FOLLOW_USER, "User not signed in");
+	}
+	if (test_identifier(message)) {
+		return response(socket, FOLLOW_USER, "Invalid user name");
+	}
+	if (!strcmp(message, user)) {
+		return response(socket, FOLLOW_USER, "User is you");
+	}
+	char* home = getpwuid(getuid())->pw_dir;
+	int home_length = strlen(home);
+	int user_length = strlen(user);
+	int path_length = home_length + 13 + user_length;
+	char* path = malloc((path_length + 11) * sizeof(char));
+	strcpy(path, home);
+	strcpy(&path[home_length], "/.my-twitter/");
+	strcpy(&path[home_length + 13], user);
+	strcpy(&path[path_length], "/users.txt");
+	FILE* stream = fopen(path, "a+");
+	free(path);
+	char line[139];
+	for (;;) {
+		if (fscanf(stream, "%[^\n]\n", line) == EOF) {
+			break;
+		}
+		if (!strcmp(line, message)) {
+			fclose(stream);
+			return response(socket, FOLLOW_USER, "User already followed");
+		}
+	}
+	fprintf(stream, "%s\n", message);
+	fclose(stream);
+	return response(socket, FOLLOW_USER, "");
 }
 
 int follow_tag(int sockets[], char* users[], int index, char* message) {
+	if (users[index] == NULL) {
+		return response(sockets[index], FOLLOW_TAG, "User not signed in");
+	}
 	return 0;
 }
 
 int list_followed_users(int sockets[], char* users[], int index, char* message) {
+	if (users[index] == NULL) {
+		return response(sockets[index], LIST_FOLLOWED_USERS, "User not signed in");
+	}
 	return 0;
 }
 
 int list_followed_tags(int sockets[], char* users[], int index, char* message) {
+	if (users[index] == NULL) {
+		return response(sockets[index], LIST_FOLLOWED_TAGS, "User not signed in");
+	}
 	return 0;
 }
 
 int list_followers(int sockets[], char* users[], int index, char* message) {
+	if (users[index] == NULL) {
+		return response(sockets[index], LIST_FOLLOWERS, "User not signed in");
+	}
 	return 0;
 }
 
 int request(int sockets[], char* users[], int index) {
+	printf("%s\n", "HERE");
 	int recv_size = (LENGTH + 2) * sizeof(char);
 	char* recv_buff = malloc(recv_size);
 	if ((recv_size = recv(sockets[index], recv_buff, recv_size, 0)) >= 2) {
@@ -245,7 +282,7 @@ int request(int sockets[], char* users[], int index) {
 			}
 		}
 	} else {
-		recv_size = 0;
+		recv_size = 1;
 	}
 	free(recv_buff);
 	return recv_size;
@@ -302,25 +339,23 @@ int main(int argc, char* argv[]) {
 				perror("Server echo: accept error\n");
 				return 5;
 			}
-			socket_index = 0;
-			while (socket_index < FD_SETSIZE && client_sockets[socket_index] > 0) {
-				socket_index++;
-			}
+			socket_index = -1;
+			while (++socket_index < FD_SETSIZE && ~client_sockets[socket_index]);
 			if (socket_index == FD_SETSIZE) {
-				exit(1);
+				close(client_socket);
 			}
-			printf("Connexion client (socket %d)\n", client_socket);
 			client_sockets[socket_index] = client_socket;
 			FD_SET(client_socket, &next_sockets);
 			if (client_socket >= socket_max) {
 				socket_max = client_socket + 1;
 			}
 			socket_count--;
+			printf("Connexion client (socket %d)\n", client_socket);
 		}
 		/* Échange de données */
 		socket_index = 0;
 		while (socket_count > 0 && socket_index < FD_SETSIZE) {
-			if ((client_socket = client_sockets[socket_index]) >= 0 && FD_ISSET(client_socket, &current_sockets)) {
+			if (~(client_socket = client_sockets[socket_index]) && FD_ISSET(client_socket, &current_sockets)) {
 				if (request(client_sockets, client_users, socket_index)) {
 					printf("Déconnexion client (socket %d)\n", client_socket);
 					client_sockets[socket_index] = -1;
@@ -328,8 +363,11 @@ int main(int argc, char* argv[]) {
 						free(client_users[socket_index]);
 						client_users[socket_index] = NULL;
 					}
-					close(client_socket);
+					if (socket_index == socket_max) {
+						while (--socket_max > server_socket + 1 && !~client_sockets[socket_max]);
+					}
 					FD_CLR(client_socket, &next_sockets);
+					close(client_socket);
 				}
 				socket_count--;
 			}
