@@ -9,8 +9,10 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <termios.h>
+#include <signal.h>
 
 #define MAXLINE 140
+
 
 int serverSocket,servlen,n,retread;
 struct sockaddr_in serv_addr;
@@ -28,7 +30,7 @@ void viderBuffer()
     }
 }
 
-int affInfo(char *buff) {
+void affInfo(char *buff) {
     printf("type : %d\tcontenu : %s\n",(int)buff[0], &buff[1]);
 }
 
@@ -89,6 +91,10 @@ int quitter() {
 	exit(0);
 }
 
+void Recuperation(int sig) {
+  quitter();
+}
+
 int menuConnecte(char *addIp, int port) {
   	char answer;
   	int cont = 0;
@@ -123,7 +129,7 @@ int menuConnecte(char *addIp, int port) {
 }
 
 void creer_compte() {
-	char nomUtil[141];
+  char nomUtil[141];
 	char mdp[141];
 	char confmdp[141];
 	char *toSend;
@@ -132,15 +138,15 @@ void creer_compte() {
 
 	printf("\n\n");
 	while(!Cbon) {
-		printf("Votre nom d'utilisateur :");
-    	scanf("%140s",nomUtil);
-    	printf("Votre mot de passe :");
+		printf("Votre nom d'utilisateur : ");
+  	scanf("%140s",nomUtil);
+  	printf("Votre mot de passe : ");
     	scanf("%140s",mdp);
-    	printf("Confirmation du mot de passe :");
+    	printf("Confirmation du mot de passe : ");
     	scanf("%140s",confmdp);
 
-    	if (strcmp(mdp,confmdp)==0 && nomUtil!=NULL && nomUtil!="") { //les données sont conformes
-      		Cbon = 1;
+    	if (strcmp(mdp,confmdp)==0 && nomUtil!=NULL && strlen(nomUtil)!=0) { //les données sont conformes
+      		
       		toSend = malloc(sizeof(char)*(strlen(nomUtil)+strlen(mdp)+2));
 
       		strcpy(toSend,nomUtil);
@@ -151,18 +157,24 @@ void creer_compte() {
 
       		if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
       			bufRecv[recv_size] = '\0';
-				int type = bufRecv[0];
-				char* message = &bufRecv[1];
-				affInfo(bufRecv);
+				    int type = bufRecv[0];
+				    char* message = &bufRecv[1];
+				    //affInfo(bufRecv);
+            if (type==0 && message[0]=='\0') {
+              printf("\nLe compte est bien créé.\n");
+              Cbon = 1;
+            } else {
+              printf("\nerreur : %s\n\n",message);
+            }
       		}
 
-      		menuPrincipal();
-    	} else {
+      		
+      } else {
       		printf("\nVos données sont non conformes\n");
-    	}
+      }
   	}
   	viderBuffer();
-
+    menuPrincipal();
 }
 
 
@@ -191,6 +203,7 @@ int connexion(char *addIp, int port) {
 		perror("erreur connect");
 		exit(1);
 	}
+  return 0;
 }
 
 
@@ -256,6 +269,12 @@ int main(int argc, char **argv){
       		printf("Trop d'arguments\n");
       		exit(1);
 	}
+
+  struct sigaction nvt, old;
+  memset(&nvt,0,sizeof(nvt));
+  /* memset necessaire pour flags=0 */
+  nvt.sa_handler = Recuperation;
+  sigaction(SIGINT,  &nvt, &old);
 
 	connexion(addIp, port);
 
