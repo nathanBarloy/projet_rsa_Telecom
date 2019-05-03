@@ -1,3 +1,4 @@
+#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -5,6 +6,7 @@
 #include <netinet/in.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 
 #define PORT 2222
 #define LENGTH 140
@@ -17,6 +19,20 @@
 #define LIST_USERS 6
 #define LIST_FOLLOWED_USERS 7
 #define LIST_FOLLOWED_TAGS 8
+
+int test_identifier(char* string) {
+	for (int i = 0; string[i] != '\0'; i++) {
+		if (
+			(string[i] != '-' && string[i] < '0') ||
+			(string[i] >= ':' && string[i] < 'A') ||
+			(string[i] >= '[' && string[i] != '_' && string[i] < 'a') ||
+			string[i] >= '{'
+		) {
+			return 1;
+		}
+	}
+	return 0;
+}
 
 int response(int socket, int type, char* message) {
 	int send_size = (strlen(message) + 2) * sizeof(char);
@@ -33,6 +49,46 @@ int response(int socket, int type, char* message) {
 }
 
 int sign_up(int socket, char* message) {
+	if (message[0] == '\0') {
+		response(socket, SIGN_UP, "Neither user name nor password provided");
+		return 0;
+	}
+	if (message[0] == '@') {
+		response(socket, SIGN_UP, "No user name provided");
+		return 0;
+	}
+	char* password = strchr(message, '@');
+	if (password == NULL) {
+		response(socket, SIGN_UP, "No password provided");
+		return 0;
+	}
+	password[0] = '\0';
+	int length = password - message;
+	password = &password[1];
+	if (test_identifier(message)) {
+		response(socket, SIGN_UP, "Invalid user name");
+		return 0;
+	}
+	if (test_identifier(password)) {
+		response(socket, SIGN_UP, "Invalid password");
+		return 0;
+	}
+	char* home = getpwuid(getuid())->pw_dir;
+	char* directory = "/.my-twitter/";
+	char* path = malloc((strlen(home) + strlen(directory) + length + 1) * sizeof(char));
+	strcpy(path, home);
+	strcat(path, directory);
+	mkdir(path, 0700);
+	strcat(path, message);
+	FILE* stream = fopen(path, "wx");
+	if (stream == NULL) {
+		free(path);
+		response(socket, SIGN_UP, "User name not available");
+		return 0;
+	}
+	fprintf(stream, "%s\n", password);
+	fclose(stream);
+	response(socket, SIGN_UP, "");
 	return 0;
 }
 
@@ -41,12 +97,12 @@ int sign_in(int socket, char* message) {
 }
 
 int sign_out(int socket, char* message) {
-	return response(socket, 2, "") || 1;
+	return response(socket, SIGN_OUT, "") || 1;
 }
 
 int tweet(int socket, char* message) {
 	printf("%s\n", message);
-	return response(socket, 3, "TAC");
+	return response(socket, TWEET, "TAC");
 }
 
 int follow_user(int socket, char* message) {
@@ -202,4 +258,7 @@ int main(int argc, char* argv[]) {
 			socket_index++;
 		}
 	}
+	/* Fermeture d'une socket */
+	close(server_socket);
+	return 0;
 }
