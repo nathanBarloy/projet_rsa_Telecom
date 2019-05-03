@@ -48,7 +48,11 @@ int response(int socket, int type, char* message) {
 	return send_size;
 }
 
-int sign_up(int socket, char* message) {
+int sign_up(int sockets[], char* users[], int index, char* message) {
+	int socket = sockets[index];
+	if (users[index] != NULL) {
+		return response(socket, SIGN_UP, "User already signed in");
+	}
 	if (message[0] == '\0') {
 		response(socket, SIGN_UP, "Neither user name nor password provided");
 		return 0;
@@ -97,84 +101,89 @@ int sign_up(int socket, char* message) {
 	strcpy(&path[path_length + 1], "followers.txt");
 	fclose(fopen(path, "w"));
 	free(path);
+	users[index] = malloc((message_length + 1) * sizeof(char));
+	strcpy(users[index], message);
 	return response(socket, SIGN_UP, "") && 0;
 }
 
-int sign_in(int socket, char* message) {
+int sign_in(int sockets[], char* users[], int index, char* message) {
 	return 0;
 }
 
-int sign_out(int socket, char* message) {
-	return response(socket, SIGN_OUT, "") || 1;
+int sign_out(int sockets[], char* users[], int index, char* message) {
+	return response(sockets[index], SIGN_OUT, "") || 1;
 }
 
-int tweet(int socket, char* message) {
+int tweet(int sockets[], char* users[], int index, char* message) {
+	if (users[index] == NULL) {
+		return response(sockets[index], TWEET, "User not signed in");
+	}
 	printf("%s\n", message);
-	return response(socket, TWEET, "TAC");
+	return response(sockets[index], TWEET, "");
 }
 
-int follow_user(int socket, char* message) {
+int follow_user(int sockets[], char* users[], int index, char* message) {
 	return 0;
 }
 
-int follow_tag(int socket, char* message) {
+int follow_tag(int sockets[], char* users[], int index, char* message) {
 	return 0;
 }
 
-int list_followed_users(int socket, char* message) {
+int list_followed_users(int sockets[], char* users[], int index, char* message) {
 	return 0;
 }
 
-int list_followed_tags(int socket, char* message) {
+int list_followed_tags(int sockets[], char* users[], int index, char* message) {
 	return 0;
 }
 
-int list_followers(int socket, char* message) {
+int list_followers(int sockets[], char* users[], int index, char* message) {
 	return 0;
 }
 
-int request(int socket) {
+int request(int sockets[], char* users[], int index) {
 	int recv_size = (LENGTH + 2) * sizeof(char);
 	char* recv_buff = malloc(recv_size);
-	if ((recv_size = recv(socket, recv_buff, recv_size, 0)) >= 2) {
+	if ((recv_size = recv(sockets[index], recv_buff, recv_size, 0)) >= 2) {
 		recv_buff[recv_size] = '\0';
 		int type = recv_buff[0];
 		char* message = &recv_buff[1];
 		switch (type) {
 			case SIGN_UP: {
-				recv_size = sign_up(socket, message);
+				recv_size = sign_up(sockets, users, index, message);
 				break;
 			}
 			case SIGN_IN: {
-				recv_size = sign_in(socket, message);
+				recv_size = sign_in(sockets, users, index, message);
 				break;
 			}
 			case SIGN_OUT: {
-				recv_size = sign_out(socket, message);
+				recv_size = sign_out(sockets, users, index, message);
 				break;
 			}
 			case TWEET: {
-				recv_size = tweet(socket, message);
+				recv_size = tweet(sockets, users, index, message);
 				break;
 			}
 			case FOLLOW_USER: {
-				recv_size = follow_user(socket, message);
+				recv_size = follow_user(sockets, users, index, message);
 				break;
 			}
 			case FOLLOW_TAG: {
-				recv_size = follow_tag(socket, message);
+				recv_size = follow_tag(sockets, users, index, message);
 				break;
 			}
 			case LIST_FOLLOWED_USERS: {
-				recv_size = list_followed_users(socket, message);
+				recv_size = list_followed_users(sockets, users, index, message);
 				break;
 			}
 			case LIST_FOLLOWED_TAGS: {
-				recv_size = list_followed_tags(socket, message);
+				recv_size = list_followed_tags(sockets, users, index, message);
 				break;
 			}
 			case LIST_FOLLOWERS: {
-				recv_size = list_followers(socket, message);
+				recv_size = list_followers(sockets, users, index, message);
 				break;
 			}
 		}
@@ -208,10 +217,11 @@ int main(int argc, char* argv[]) {
 		perror("Server echo: listen error\n");
 		return 3;
 	}
-
 	int client_sockets[FD_SETSIZE];
+	char* client_users[FD_SETSIZE];
 	for (int i = 0; i < FD_SETSIZE; i++) {
 		client_sockets[i] = -1;
+		client_users[i] = NULL;
 	}
 	int client_socket;
 	struct sockaddr_in client_address;
@@ -223,7 +233,6 @@ int main(int argc, char* argv[]) {
 	FD_ZERO(&current_sockets);
 	FD_ZERO(&next_sockets);
 	FD_SET(server_socket, &next_sockets);
-
 	for (;;) {
 		current_sockets = next_sockets;
 		/* Création des sockets de dialogue */
@@ -255,10 +264,14 @@ int main(int argc, char* argv[]) {
 		socket_index = 0;
 		while (socket_count > 0 && socket_index < FD_SETSIZE) {
 			if ((client_socket = client_sockets[socket_index]) >= 0 && FD_ISSET(client_socket, &current_sockets)) {
-				if (request(client_socket)) {
+				if (request(client_sockets, client_users, socket_index)) {
 					printf("Déconnexion client (socket %d)\n", client_socket);
-					close(client_socket);
 					client_sockets[socket_index] = -1;
+					if (client_users[socket_index] != NULL) {
+						free(client_users[socket_index]);
+						client_users[socket_index] = NULL;
+					}
+					close(client_socket);
 					FD_CLR(client_socket, &next_sockets);
 				}
 				socket_count--;
