@@ -172,7 +172,7 @@ int tweet(int sockets[], char* users[], int index, char* message) {
 int follow_user(int sockets[], char* users[], int index, char* message) {
 	int socket = sockets[index];
 	char* user = users[index];
-	if (users == NULL) {
+	if (user == NULL) {
 		return response(socket, FOLLOW_USER, "User not signed in");
 	}
 	if (test_identifier(message)) {
@@ -236,7 +236,6 @@ int list_followers(int sockets[], char* users[], int index, char* message) {
 }
 
 int request(int sockets[], char* users[], int index) {
-	printf("%s\n", "HERE");
 	int recv_size = (LENGTH + 2) * sizeof(char);
 	char* recv_buff = malloc(recv_size);
 	if ((recv_size = recv(sockets[index], recv_buff, recv_size, 0)) >= 2) {
@@ -279,6 +278,9 @@ int request(int sockets[], char* users[], int index) {
 			case LIST_FOLLOWERS: {
 				recv_size = list_followers(sockets, users, index, message);
 				break;
+			}
+			default: {
+				recv_size = 0;
 			}
 		}
 	} else {
