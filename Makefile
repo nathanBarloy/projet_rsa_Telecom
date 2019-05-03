@@ -1,5 +1,5 @@
-CC = gcc					 # Compilateur
-CFLAGS = -Wall -g		     # Options de compilation
+CC = gcc # Compilateur
+CFLAGS = -Wall -g -lncurses # Options de compilation
 EXEC = ./client/src/client ./server/src/server
 SERVER = ./server/src/server
 CLIENT = ./client/src/client
