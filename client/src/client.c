@@ -13,6 +13,8 @@
 
 #define MAXLINE 140
 
+//TODO afficher des listes et faire le suivi de thematiques et des utilisateurs
+
 
 int serverSocket,servlen,n,retread;
 struct sockaddr_in serv_addr;
@@ -95,39 +97,6 @@ void Recuperation(int sig) {
   quitter();
 }
 
-int menuConnecte(char *addIp, int port) {
-  	char answer;
-  	int cont = 0;
-  	printf("\nQue voulez vous faire ?\n");
-  	while (!cont) {
-    	printf("t -> twitter\nu -> demander la liste des utilisateurs suivis\nv -> demander la liste des utilisateurs qui vous suivent\nh -> demander la liste des thématiques suivies\nd -> déconnexion\nq -> quitter l'application\nVotre choix : ");
-    	answer = getchar();
-    	if (answer && (answer=='t' || answer=='u' || answer=='v' || answer=='h' || answer=='d' || answer=='q')) {
-     		cont = 1;
-    	} else {
-      		printf("\nVotre entrée n'est pas correcte. Réessayez.\n");
-    	}
-    		viderBuffer();
-  	}
-  	switch (answer) {
-    	case 't' :
-      		break;
-    	case 'u' :
-      		break;
-    	case 'v' :
-      		break;
-    	case 'h' :
-      		break;
-    	case 'd' :
-      		break;
-    	case 'q' :
-      		quitter();
-      		break;
-  	}
-
-  	return 0;
-}
-
 void creer_compte() {
   char nomUtil[141];
 	char mdp[141];
@@ -138,9 +107,9 @@ void creer_compte() {
 
 	printf("\n\n");
 	while(!Cbon) {
-		printf("Votre nom d'utilisateur : ");
-  	scanf("%140s",nomUtil);
-  	printf("Votre mot de passe : ");
+		  printf("Votre nom d'utilisateur : ");
+      scanf("%140s",nomUtil);
+      printf("Votre mot de passe : ");
     	scanf("%140s",mdp);
     	printf("Confirmation du mot de passe : ");
     	scanf("%140s",confmdp);
@@ -178,6 +147,156 @@ void creer_compte() {
 }
 
 
+int demander_utilisateurs_suivis() {
+
+  envoyer(7,"");
+  
+  int recv_size;
+  if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
+    bufRecv[recv_size] = '\0';
+    int type = bufRecv[0];
+    char* message = &bufRecv[1];
+    //affInfo(bufRecv);
+    if (type==7 && message[0]=='\0') {
+      //TODO Afficher la liste
+    } else {
+      printf("\nerreur : %s\n\n",message);
+    }
+  }
+  return 0;
+}
+
+
+int demander_utilisateurs_qui_suivent() {
+
+  envoyer(6,"");
+
+  int recv_size;
+  if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
+    bufRecv[recv_size] = '\0';
+    int type = bufRecv[0];
+    char* message = &bufRecv[1];
+    //affInfo(bufRecv);
+    if (type==6 && message[0]=='\0') {
+      //TODO Afficher la liste
+    } else {
+      printf("\nerreur : %s\n\n",message);
+    }
+  }
+  return 0;
+}
+
+
+int demander_thematiques_suivies() {
+  envoyer(8,"");
+
+  int recv_size;
+  if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
+    bufRecv[recv_size] = '\0';
+    int type = bufRecv[0];
+    char* message = &bufRecv[1];
+    //affInfo(bufRecv);
+    if (type==8 && message[0]=='\0') {
+      //TODO Afficher la liste
+    } else {
+      printf("\nerreur : %s\n\n",message);
+    }
+  }
+  return 0;
+}
+
+
+
+
+
+int menuConnecte() {
+  char answer;
+  int cont = 0;
+  printf("\nQue voulez vous faire ?\n");
+  while (!cont) {
+    printf("t -> twitter\ns -> suivre un utilisateur\nr -> suivre une thématique\nu -> demander la liste des utilisateurs suivis\nv -> demander la liste des utilisateurs qui vous suivent\nh -> demander la liste des thématiques suivies\nq -> quitter l'application\nVotre choix : ");
+    answer = getchar();
+    if (answer && (answer=='t' || answer=='s' ||answer=='r' ||answer=='u' || answer=='v' || answer=='h' || answer=='q')) {
+      cont = 1;
+    } else {
+      printf("\nVotre entrée n'est pas correcte. Réessayez.\n");
+    }
+    viderBuffer();
+  }
+  switch (answer) {
+    case 't' :
+      break;
+    case 's' :
+      break;
+    case 'r' :
+      break;
+    case 'u' :
+      demander_utilisateurs_suivis();
+      break;
+    case 'v' :
+      demander_utilisateurs_qui_suivent();
+      break;
+    case 'h' :
+      demander_thematiques_suivies();
+      break;
+    case 'q' :
+      quitter();
+      break;
+  }
+
+  return 0;
+}
+
+
+int demande_connexion() {
+  int Cbon=0;
+  char name[MAXLINE];
+  char password[MAXLINE];
+  char *toSend;
+
+
+
+  while(!Cbon) {
+      printf("\nNom d'utilisateur : ");
+      scanf("%s", name);
+      printf("Mot de passe : ");
+      system("stty -echo");
+      scanf("%s", password);
+      system("stty echo");
+
+      if (name!=NULL && strlen(name)!=0) { //les données sont conformes
+          
+          toSend = malloc(sizeof(char)*(strlen(name)+strlen(password)+2));
+
+          strcpy(toSend,name);
+          strcat(toSend,"@");
+          strcat(toSend,password);
+
+          envoyer(1,toSend);
+
+          int recv_size;
+          if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
+            bufRecv[recv_size] = '\0';
+            int type = bufRecv[0];
+            char* message = &bufRecv[1];
+            //affInfo(bufRecv);
+            if (type==1 && message[0]=='\0') {
+              printf("\nLa connexion a réussi\n");
+              Cbon = 1;
+            } else {
+              printf("\nerreur : %s\n\n",message);
+            }
+          }
+      } else {
+          printf("\nVos données sont non conformes\n");
+      }
+    }
+    viderBuffer();
+    menuConnecte();
+    return 0;
+}
+
+
 int connexion(char *addIp, int port) {
 
 	//on remplis la structure serv_addre avec l'adresse du serveur
@@ -211,9 +330,7 @@ int menuPrincipal() {
 	  /* lance le menu principal de l'appli
   */
 	char answer;
-	char name[MAXLINE];
-  	char password[MAXLINE];
-  	int cont = 0;
+  int cont = 0;
 
 
 
@@ -230,14 +347,8 @@ int menuPrincipal() {
 	}
 	switch (answer) {
     	case 'c' :
-      		printf("\nNom d'utilisateur : ");
-      		scanf("%s", name);
-      		printf("Mot de passe : ");
-	      	system("stty -echo");
-	      	scanf("%s", password);
-	      	system("stty echo");
-	      	printf("\n%s\n%s\n",name,password);
-	      	break;
+          demande_connexion();
+          break;
     	case 'n' :
 	      	creer_compte();
 	      	break;
