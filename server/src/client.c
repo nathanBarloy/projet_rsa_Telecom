@@ -42,7 +42,7 @@ int main(int argc, char* argv[]) {
 			perror("Client echo: recv error\n");
 			return 5;
 		}
-	} while (recv_buff[0] != 3);
+	} while (recv_buff[0] != 0);
 	printf("%s\n", &recv_buff[1]);
 	send_buff[0] = 3;
 	int times = 10;

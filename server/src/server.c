@@ -16,9 +16,9 @@
 #define TWEET 3
 #define FOLLOW_USER 4
 #define FOLLOW_TAG 5
-#define LIST_USERS 6
-#define LIST_FOLLOWED_USERS 7
-#define LIST_FOLLOWED_TAGS 8
+#define LIST_FOLLOWED_USERS 6
+#define LIST_FOLLOWED_TAGS 7
+#define LIST_FOLLOWERS 8
 
 int test_identifier(char* string) {
 	for (int i = 0; string[i] != '\0'; i++) {
@@ -63,7 +63,6 @@ int sign_up(int socket, char* message) {
 		return 0;
 	}
 	password[0] = '\0';
-	int length = password - message;
 	password = &password[1];
 	if (test_identifier(message)) {
 		response(socket, SIGN_UP, "Invalid user name");
@@ -74,22 +73,31 @@ int sign_up(int socket, char* message) {
 		return 0;
 	}
 	char* home = getpwuid(getuid())->pw_dir;
-	char* directory = "/.my-twitter/";
-	char* path = malloc((strlen(home) + strlen(directory) + length + 1) * sizeof(char));
+	int home_length = strlen(home);
+	int message_length = strlen(message);
+	int path_length = home_length + 13 + message_length;
+	char* path = malloc((path_length + 14) * sizeof(char));
 	strcpy(path, home);
-	strcat(path, directory);
+	strcpy(&path[home_length], "/.my-twitter/");
 	mkdir(path, 0700);
-	strcat(path, message);
-	FILE* stream = fopen(path, "wx");
-	if (stream == NULL) {
+	strcpy(&path[home_length + 13], message);
+	if (!~mkdir(path, 0700)) {
 		free(path);
-		response(socket, SIGN_UP, "User name not available");
-		return 0;
+		return response(socket, SIGN_UP, "User name not available") && 0;
 	}
+	path[path_length] = '/';
+	strcpy(&path[path_length + 1], "password.txt");
+	FILE* stream = fopen(path, "w");
 	fprintf(stream, "%s\n", password);
 	fclose(stream);
-	response(socket, SIGN_UP, "");
-	return 0;
+	strcpy(&path[path_length + 1], "users.txt");
+	fclose(fopen(path, "w"));
+	strcpy(&path[path_length + 1], "tags.txt");
+	fclose(fopen(path, "w"));
+	strcpy(&path[path_length + 1], "followers.txt");
+	fclose(fopen(path, "w"));
+	free(path);
+	return response(socket, SIGN_UP, "") && 0;
 }
 
 int sign_in(int socket, char* message) {
@@ -113,15 +121,15 @@ int follow_tag(int socket, char* message) {
 	return 0;
 }
 
-int list_users(int socket, char* message) {
-	return 0;
-}
-
 int list_followed_users(int socket, char* message) {
 	return 0;
 }
 
 int list_followed_tags(int socket, char* message) {
+	return 0;
+}
+
+int list_followers(int socket, char* message) {
 	return 0;
 }
 
@@ -157,16 +165,16 @@ int request(int socket) {
 				recv_size = follow_tag(socket, message);
 				break;
 			}
-			case LIST_USERS: {
-				recv_size = list_users(socket, message);
-				break;
-			}
 			case LIST_FOLLOWED_USERS: {
 				recv_size = list_followed_users(socket, message);
 				break;
 			}
 			case LIST_FOLLOWED_TAGS: {
 				recv_size = list_followed_tags(socket, message);
+				break;
+			}
+			case LIST_FOLLOWERS: {
+				recv_size = list_followers(socket, message);
 				break;
 			}
 		}
