@@ -80,7 +80,7 @@ int sign_up(int sockets[], char* users[], int index, char* message) {
 	int home_length = strlen(home);
 	int message_length = strlen(message);
 	int path_length = home_length + 13 + message_length;
-	char* path = malloc((path_length + 14) * sizeof(char));
+	char* path = malloc((path_length + 15) * sizeof(char));
 	strcpy(path, home);
 	strcpy(&path[home_length], "/.my-twitter/");
 	mkdir(path, 0700);
@@ -103,11 +103,68 @@ int sign_up(int sockets[], char* users[], int index, char* message) {
 	free(path);
 	users[index] = malloc((message_length + 1) * sizeof(char));
 	strcpy(users[index], message);
-	return response(socket, SIGN_UP, "") && 0;
+	return response(socket, SIGN_UP, "");
 }
 
 int sign_in(int sockets[], char* users[], int index, char* message) {
-	return 0;
+	int socket = sockets[index];
+	if (users[index] != NULL) {
+		return response(socket, SIGN_IN, "User already signed in");
+	}
+	if (message[0] == '\0') {
+		response(socket, SIGN_IN, "Neither user name nor password provided");
+		return 0;
+	}
+	if (message[0] == '@') {
+		response(socket, SIGN_IN, "No user name provided");
+		return 0;
+	}
+	char* password = strchr(message, '@');
+	if (password == NULL) {
+		response(socket, SIGN_IN, "No password provided");
+		return 0;
+	}
+	password[0] = '\0';
+	password = &password[1];
+	if (test_identifier(message)) {
+		response(socket, SIGN_IN, "Invalid user name");
+		return 0;
+	}
+	if (test_identifier(password)) {
+		response(socket, SIGN_IN, "Invalid password");
+		return 0;
+	}
+	char* home = getpwuid(getuid())->pw_dir;
+	int home_length = strlen(home);
+	int message_length = strlen(message);
+	int path_length = home_length + 13 + message_length;
+	char* path = malloc((path_length + 15) * sizeof(char));
+	strcpy(path, home);
+	strcpy(&path[home_length], "/.my-twitter/");
+	strcpy(&path[home_length + 13], message);
+	strcpy(&path[path_length], "/password.txt");
+	FILE* stream = fopen(path, "r");
+	free(path);
+	if (stream == NULL) {
+		return response(socket, SIGN_IN, "Incorrect user name");
+	}
+	char line[139];
+	fscanf(stream, "%[^\n]\n", line);
+	fclose(stream);
+	if (strcmp(line, password)) {
+		return response(socket, SIGN_IN, "Incorrect password");
+	}
+	for (int i = 0; i < FD_SETSIZE; i++) {
+		char* user = users[i];
+		if (user != NULL) {
+			if (!strcmp(user, message)) {
+				return response(socket, SIGN_IN, "User already signed in elsewhere");
+			}
+		}
+	}
+	users[index] = malloc((message_length + 1) * sizeof(char));
+	strcpy(users[index], message);
+	return response(socket, SIGN_IN, "");
 }
 
 int sign_out(int sockets[], char* users[], int index, char* message) {
