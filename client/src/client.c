@@ -279,44 +279,69 @@ int demander_thematiques_suivies() {
 }
 
 
-
+int twitter() {
+	printf("\nEcrivez votre tweet :\n");
+	char tweet[MAXLINE];
+	
+	fgets(tweet, MAXLINE, stdin);
+	
+	envoyer(3,tweet);
+	
+	int recv_size;
+    if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
+		bufRecv[recv_size] = '\0';
+		int type = bufRecv[0];
+        char* message = &bufRecv[1];
+         //affInfo(bufRecv);
+        if (type==3 && message[0]=='\0') {
+			printf("\nLe tweet est bien envoyé\n");
+        } else {
+            printf("\nerreur : %s\n\n",message);
+        }
+    }
+	return 0;
+}
 
 
 int menuConnecte() {
   char answer;
   int cont = 0;
-  printf("\nQue voulez vous faire ?\n");
-  while (!cont) {
-    printf("t -> twitter\ns -> suivre un utilisateur\nr -> suivre une thématique\nu -> demander la liste des utilisateurs suivis\nv -> demander la liste des utilisateurs qui vous suivent\nh -> demander la liste des thématiques suivies\nq -> quitter l'application\nVotre choix : ");
-    answer = getchar();
-    if (answer && (answer=='t' || answer=='s' ||answer=='r' ||answer=='u' || answer=='v' || answer=='h' || answer=='q')) {
-      cont = 1;
-    } else {
-      printf("\nVotre entrée n'est pas correcte. Réessayez.\n");
-    }
-    viderBuffer();
+  while (1) {
+	  answer = '\0';
+	  cont=0;
+	  printf("\nQue voulez vous faire ?\n");
+	  while (!cont) {
+		printf("t -> twitter\ns -> suivre un utilisateur\nr -> suivre une thématique\nu -> demander la liste des utilisateurs suivis\nv -> demander la liste des utilisateurs qui vous suivent\nh -> demander la liste des thématiques suivies\nq -> quitter l'application\nVotre choix : ");
+		answer = getchar();
+		if (answer && (answer=='t' || answer=='s' ||answer=='r' ||answer=='u' || answer=='v' || answer=='h' || answer=='q')) {
+		  cont = 1;
+		} else {
+		  printf("\nVotre entrée n'est pas correcte. Réessayez.\n");
+		}
+		viderBuffer();
+	  }
+	  switch (answer) {
+		case 't' :
+			twitter();
+			break;
+		case 's' :
+		  break;
+		case 'r' :
+		  break;
+		case 'u' :
+		  demander_utilisateurs_suivis();
+		  break;
+		case 'v' :
+		  demander_utilisateurs_qui_suivent();
+		  break;
+		case 'h' :
+		  demander_thematiques_suivies();
+		  break;
+		case 'q' :
+		  quitter();
+		  break;
+	  }
   }
-  switch (answer) {
-    case 't' :
-      break;
-    case 's' :
-      break;
-    case 'r' :
-      break;
-    case 'u' :
-      demander_utilisateurs_suivis();
-      break;
-    case 'v' :
-      demander_utilisateurs_qui_suivent();
-      break;
-    case 'h' :
-      demander_thematiques_suivies();
-      break;
-    case 'q' :
-      quitter();
-      break;
-  }
-
   return 0;
 }
 
