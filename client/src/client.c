@@ -23,6 +23,127 @@ char bufRecv[MAXLINE];
 struct hostent *hp;
 
 
+
+
+int compter_thematiques(char *texte) {
+  int nbThematique = 0;
+  int dansUnTheme=0;
+  int tailleTheme=0;
+  int i = -1;
+  char c;
+
+  do {
+
+    i++;
+      c = texte[i];
+
+    switch(c) {
+
+      case '#' :
+        nbThematique++;
+          dansUnTheme = 1;
+          tailleTheme = 0;
+          break;
+
+        case ' ' :
+
+        case '\0' :
+          if (dansUnTheme) {
+            dansUnTheme = 0;
+            //printf("debut : %d et taille : %d\n", debutTheme,tailleTheme);
+            if (tailleTheme==0) {
+              nbThematique--;
+            }
+          }
+          break;
+
+        default :
+          if (dansUnTheme) {
+            tailleTheme++;
+          }
+          break;
+
+      } 
+
+      
+    } while (c!='\0');
+
+    return nbThematique;
+}
+
+char **recherche_thematiques(char *texte) {
+  /*cette fonction sert à extraire les thematiques d'un tweet*/
+
+  int nbThematique = compter_thematiques(texte);
+
+  char **res = malloc(sizeof(char*)*nbThematique);
+  int dansUnTheme=0;
+  int tailleTheme=0;
+  int debutTheme=0;
+  int i = -1;
+  char c;
+  char *newTheme;
+  int numTheme = 0;
+
+  do {
+
+    i++;
+      c = texte[i];
+
+    switch(c) {
+
+      case '#' :
+        if (dansUnTheme) {
+          dansUnTheme = 0;
+            //printf("debut : %d et taille : %d\n", debutTheme,tailleTheme);
+            if (tailleTheme==0) {
+              numTheme--;
+            } else {
+              newTheme = malloc(sizeof(char)*(tailleTheme+1));
+              strncpy(newTheme,texte+debutTheme, tailleTheme);
+              //printf("%s\n", newTheme);
+              res[numTheme-1] = newTheme;
+            }
+        }
+        numTheme++;
+          dansUnTheme = 1;
+          debutTheme = i+1;
+          tailleTheme = 0;
+          break;
+
+        case ' ' :
+
+        case '\0' :
+          if (dansUnTheme) {
+            dansUnTheme = 0;
+            //printf("debut : %d et taille : %d\n", debutTheme,tailleTheme);
+            if (tailleTheme==0) {
+              numTheme--;
+            } else {
+              newTheme = malloc(sizeof(char)*(tailleTheme+1));
+              strncpy(newTheme,texte+debutTheme, tailleTheme);
+              //printf("%s\n", newTheme);
+              res[numTheme-1] = newTheme;
+            }
+          }
+          break;
+
+        default :
+          if (dansUnTheme) {
+            tailleTheme++;
+          }
+          break;
+
+      } 
+
+      
+    } while (c!='\0');
+    return res;
+}
+
+
+
+
 void viderBuffer()
 {
     int c = 0;
