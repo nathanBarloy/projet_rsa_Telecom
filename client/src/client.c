@@ -218,54 +218,6 @@ void Recuperation(int sig) {
   quitter();
 }
 
-void creer_compte() {
-  char nomUtil[141];
-	char mdp[141];
-	char confmdp[141];
-	char *toSend;
-	int Cbon=0;
-	int recv_size;
-
-	printf("\n\n");
-	while(!Cbon) {
-		  printf("Votre nom d'utilisateur : ");
-      scanf("%140s",nomUtil);
-      printf("Votre mot de passe : ");
-    	scanf("%140s",mdp);
-    	printf("Confirmation du mot de passe : ");
-    	scanf("%140s",confmdp);
-
-    	if (strcmp(mdp,confmdp)==0 && nomUtil!=NULL && strlen(nomUtil)!=0) { //les données sont conformes
-      		
-      		toSend = malloc(sizeof(char)*(strlen(nomUtil)+strlen(mdp)+2));
-
-      		strcpy(toSend,nomUtil);
-      		strcat(toSend,"@");
-      		strcat(toSend,mdp);
-
-      		envoyer(0,toSend);
-
-      		if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
-      			bufRecv[recv_size] = '\0';
-				    int type = bufRecv[0];
-				    char* message = &bufRecv[1];
-				    //affInfo(bufRecv);
-            if (type==0 && message[0]=='\0') {
-              printf("\nLe compte est bien créé.\n");
-              Cbon = 1;
-            } else {
-              printf("\nerreur : %s\n\n",message);
-            }
-      		}
-
-      		
-      } else {
-      		printf("\nVos données sont non conformes\n");
-      }
-  	}
-  	viderBuffer();
-    menuPrincipal();
-}
 
 
 int demander_utilisateurs_suivis() {
@@ -415,6 +367,56 @@ int demande_connexion() {
     viderBuffer();
     menuConnecte();
     return 0;
+}
+
+
+void creer_compte() {
+  char nomUtil[141];
+	char mdp[141];
+	char confmdp[141];
+	char *toSend;
+	int Cbon=0;
+	int recv_size;
+
+	printf("\n\n");
+	while(!Cbon) {
+		  printf("Votre nom d'utilisateur : ");
+      scanf("%140s",nomUtil);
+      printf("Votre mot de passe : ");
+    	scanf("%140s",mdp);
+    	printf("Confirmation du mot de passe : ");
+    	scanf("%140s",confmdp);
+
+    	if (strcmp(mdp,confmdp)==0 && nomUtil!=NULL && strlen(nomUtil)!=0) { //les données sont conformes
+      		
+      		toSend = malloc(sizeof(char)*(strlen(nomUtil)+strlen(mdp)+2));
+
+      		strcpy(toSend,nomUtil);
+      		strcat(toSend,"@");
+      		strcat(toSend,mdp);
+
+      		envoyer(0,toSend);
+
+      		if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
+      			bufRecv[recv_size] = '\0';
+				    int type = bufRecv[0];
+				    char* message = &bufRecv[1];
+				    //affInfo(bufRecv);
+            if (type==0 && message[0]=='\0') {
+              printf("\nLe compte est bien créé.\n");
+              Cbon = 1;
+            } else {
+              printf("\nerreur : %s\n\n",message);
+            }
+      		}
+
+      		
+      } else {
+      		printf("\nVos données sont non conformes\n");
+      }
+  	}
+  	viderBuffer();
+    menuConnecte();
 }
 
 
