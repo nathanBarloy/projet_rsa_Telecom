@@ -239,6 +239,7 @@ int suivre_utilisateur() {
             printf("\nerreur : %s\n\n",message);
         }
     }
+	viderBuffer();
 	return 0;
 }
 
@@ -262,6 +263,7 @@ int suivre_thematique() {
             printf("\nerreur : %s\n\n",message);
         }
     }
+	viderBuffer();
 	return 0;
 }
 
