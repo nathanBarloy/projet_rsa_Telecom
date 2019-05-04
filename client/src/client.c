@@ -219,6 +219,51 @@ void Recuperation(int sig) {
 }
 
 
+int suivre_utilisateur() {
+	printf("\nNom de l'utilisateur à suivre : ");
+	char name[MAXLINE];
+	
+	scanf("%s",name);
+	
+	envoyer(4,name);
+	
+	int recv_size;
+    if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
+		bufRecv[recv_size] = '\0';
+		int type = bufRecv[0];
+        char* message = &bufRecv[1];
+         //affInfo(bufRecv);
+        if (type==4 && message[0]=='\0') {
+			printf("\nL'utilisateur est bien suivi\n");
+        } else {
+            printf("\nerreur : %s\n\n",message);
+        }
+    }
+	return 0;
+}
+
+int suivre_thematique() {
+	printf("\nNom de la thématique à suivre : ");
+	char name[MAXLINE];
+	
+	scanf("%s",name);
+	
+	envoyer(5,name);
+	
+	int recv_size;
+    if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
+		bufRecv[recv_size] = '\0';
+		int type = bufRecv[0];
+        char* message = &bufRecv[1];
+         //affInfo(bufRecv);
+        if (type==5 && message[0]=='\0') {
+			printf("\nLa thématique est bien suivi\n");
+        } else {
+            printf("\nerreur : %s\n\n",message);
+        }
+    }
+	return 0;
+}
 
 int demander_utilisateurs_suivis() {
 
@@ -325,8 +370,10 @@ int menuConnecte() {
 			twitter();
 			break;
 		case 's' :
+			suivre_utilisateur();
 		  break;
 		case 'r' :
+			suivre_thematique();
 		  break;
 		case 'u' :
 		  demander_utilisateurs_suivis();
