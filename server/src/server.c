@@ -183,15 +183,25 @@ int follow_user(int sockets[], char* users[], int index, char* message) {
 	}
 	char* home = getpwuid(getuid())->pw_dir;
 	int home_length = strlen(home);
-	int user_length = strlen(user);
+	int user_length = strlen(message);
 	int path_length = home_length + 13 + user_length;
-	char* path = malloc((path_length + 11) * sizeof(char));
+	char* path = malloc((path_length + 14) * sizeof(char));
 	strcpy(path, home);
 	strcpy(&path[home_length], "/.my-twitter/");
+	strcpy(&path[home_length + 13], message);
+	strcpy(&path[path_length], "/password.txt");
+	FILE* stream = fopen(path, "r");
+	if (stream == NULL) {
+		free(path);
+		return response(socket, FOLLOW_USER, "Incorrect user name");
+	}
+	fclose(stream);
+	user_length = strlen(user);
+	path_length = home_length + 13 + user_length;
+	path = realloc(path, (path_length + 11) * sizeof(char));
 	strcpy(&path[home_length + 13], user);
 	strcpy(&path[path_length], "/users.txt");
-	FILE* stream = fopen(path, "a+");
-	free(path);
+	stream = fopen(path, "a+");
 	char line[139];
 	for (;;) {
 		if (fscanf(stream, "%[^\n]\n", line) == EOF) {
@@ -199,19 +209,57 @@ int follow_user(int sockets[], char* users[], int index, char* message) {
 		}
 		if (!strcmp(line, message)) {
 			fclose(stream);
+			free(path);
 			return response(socket, FOLLOW_USER, "User already followed");
 		}
 	}
 	fprintf(stream, "%s\n", message);
 	fclose(stream);
+	user_length = strlen(message);
+	path_length = home_length + 13 + user_length;
+	path = realloc(path, (path_length + 15) * sizeof(char));
+	strcpy(&path[home_length + 13], message);
+	strcpy(&path[path_length], "/followers.txt");
+	stream = fopen(path, "a");
+	fprintf(stream, "%s\n", user);
+	fclose(stream);
+	free(path);
 	return response(socket, FOLLOW_USER, "");
 }
 
 int follow_tag(int sockets[], char* users[], int index, char* message) {
-	if (users[index] == NULL) {
-		return response(sockets[index], FOLLOW_TAG, "User not signed in");
+	int socket = sockets[index];
+	char* user = users[index];
+	if (user == NULL) {
+		return response(socket, FOLLOW_TAG, "User not signed in");
 	}
-	return 0;
+	if (test_identifier(message)) {
+		return response(socket, FOLLOW_TAG, "Invalid tag");
+	}
+	char* home = getpwuid(getuid())->pw_dir;
+	int home_length = strlen(home);
+	int user_length = strlen(user);
+	int path_length = home_length + 13 + user_length;
+	char* path = malloc((path_length + 12) * sizeof(char));
+	strcpy(path, home);
+	strcpy(&path[home_length], "/.my-twitter/");
+	strcpy(&path[home_length + 13], user);
+	strcpy(&path[path_length], "/tags.txt");
+	FILE* stream = fopen(path, "a+");
+	free(path);
+	char line[141];
+	for (;;) {
+		if (fscanf(stream, "%[^\n]\n", line) == EOF) {
+			break;
+		}
+		if (!strcmp(line, message)) {
+			fclose(stream);
+			return response(socket, FOLLOW_TAG, "Tag already followed");
+		}
+	}
+	fprintf(stream, "%s\n", message);
+	fclose(stream);
+	return response(socket, FOLLOW_TAG, "");
 }
 
 int list_followed_users(int sockets[], char* users[], int index, char* message) {
