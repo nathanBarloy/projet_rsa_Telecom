@@ -63,7 +63,7 @@ On dispose dans cette version de `9` types de messages différents :
 - `0` (demande de création de compte) : les octets médians sont interprétés comme une chaîne de caractères et doivent respecter le format `<username>@<password>`, où `<username>` est un `<id>` (non vide) représentant le nom d'utilisateur et `<password>` un `<id>` (possiblement vide) représentant le mot de passe ;
 - `1` (demande d'authentification) : même format que pour le type `0` ;
 - `2` (demande de déconnexion) : les octets médians sont ignorés ;
-- `3` (envoi de *tweet*) : les octets médians sont interprétés comme une chaîne de caractères représentant le contenu du *tweet*, dont chaque sous-chaîne de la forme `#<tag>`, où `<tag>` est un `<id>`, (non vide et de taille maximale) représente une citation de la thématique de nom `<tag>` ;
+- `3` (envoi de *tweet*) : les octets médians sont interprétés comme une chaîne de caractères représentant le contenu du *tweet*, dont chaque sous-chaîne de la forme `#<tag>`, où `<tag>` est un `<id>` (non vide et de taille maximale), représente une citation de la thématique de nom `<tag>` ;
 - `4` (demande de suivi d'utilisateur) : les octets médians sont interprétés comme une chaîne de caractères et doivent respecter le format `<username>`, où `<username>` est un `<id>` (non vide) représentant un nom d'utilisateur ;
 - `5` (demande de suivi de thématique) : les octets médians sont interprétés comme une chaîne de caractères et doivent respecter le format `<tag>` où `<tag>` est un `<id>` (non vide) représentant un nom de thématique ;
 - `6` (demande de listage des utilisateurs suivis) : le nombre d'octets médians doit être `1` et l'unique octet médian est interprété comme un entier (non signé et non nul) représentant le numéro de page ;
