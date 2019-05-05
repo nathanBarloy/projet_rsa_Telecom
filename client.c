@@ -17,7 +17,7 @@
 
 
 int serverSocket,servlen,n,retread;
-struct sockaddr_in serv_addr;
+struct sockaddr_in6 serv_addr;
 char bufSend[MAXLINE];
 char bufRecv[MAXLINE];
 struct hostent *hp;
@@ -144,8 +144,7 @@ char **recherche_thematiques(char *texte) {
 
 
 
-void viderBuffer()
-{
+void viderBuffer() {
     int c = 0;
     while (c != '\n' && c != EOF)
     {
@@ -203,6 +202,7 @@ void afficher_liste(char *liste) {
         token = strtok(NULL, ","); 
     } 
 }
+
 
 int envoyer(int type, char* message) {
 	int send_size = (strlen(message) + 2) * sizeof(char);
@@ -308,7 +308,6 @@ int demander_utilisateurs_suivis() {
 	return 0;
 }
 
-
 int demander_utilisateurs_qui_suivent() {
 	int numpage = 1;
 	char toSend[2];
@@ -339,7 +338,6 @@ int demander_utilisateurs_qui_suivent() {
 	printf("\n");
 	return 0;
 }
-
 
 int demander_thematiques_suivies() {
 	int numpage = 1;
@@ -545,27 +543,23 @@ int connexion(char *addIp, int port) {
 
 	//on remplis la structure serv_addre avec l'adresse du serveur
 	bzero((char *) &serv_addr, sizeof(serv_addr));
-	serv_addr.sin_family = AF_INET;
+	serv_addr.sin6_family = AF_INET6;
 	int portno = port;
-    serv_addr.sin_port = htons(portno);
-	hp=(struct hostent*)gethostbyname(addIp);
-	if(hp==NULL){
-		fprintf(stderr,"%s : %d ,p, trouve dans in /etc/hosts ou dans le DNS\n",addIp,port);
-		exit(0);
-	}
-	serv_addr.sin_addr = *((struct in_addr *)(hp->h_addr));
+    serv_addr.sin6_port = htons(portno);
+	inet_pton(AF_INET6, "::1", &serv_addr.sin6_addr);
 
 	//on crée la socket
-	if((serverSocket = socket(AF_INET,SOCK_STREAM,0))<0){
+	if((serverSocket = socket(AF_INET6,SOCK_STREAM,0))<0){
 		perror("erreur socket");
 		exit(1);
 	}
-
+	printf("avant connect");
 	//on connecte la socket
 	if(connect(serverSocket,(struct sockaddr *) &serv_addr,sizeof(serv_addr))<0){
 		perror("erreur connect");
 		exit(1);
 	}
+	printf("apres connect");
   return 0;
 }
 
@@ -607,7 +601,7 @@ int menuPrincipal() {
 
 
 int main(int argc, char **argv){
-	char *addIp = "127.0.0.1";
+	char *addIp = "::1";
 	int port = 2222;
 
 	switch (argc) {
