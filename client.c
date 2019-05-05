@@ -370,6 +370,22 @@ int demander_thematiques_suivies() {
 	return 0;
 }
 
+int attendre_tweet() {
+	
+	int recv_size;
+	if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
+		bufRecv[recv_size] = '\0';
+		int type = bufRecv[0];
+		char* message = &bufRecv[1];
+		//affInfo(bufRecv);
+		if (type==9 && message[0]!='\0') {
+			//affInfo(bufRecv);
+			printf("Tweet reçu :\n%s\n\n",message);
+		}
+	}
+	
+	return 0;
+}
 
 int twitter() {
 	printf("\nEcrivez votre tweet :\n");
@@ -403,9 +419,9 @@ int menuConnecte() {
 	  cont=0;
 	  printf("\nQue voulez vous faire ?\n");
 	  while (!cont) {
-		printf("t -> twitter\ns -> suivre un utilisateur\nr -> suivre une thématique\nu -> demander la liste des utilisateurs suivis\nv -> demander la liste des utilisateurs qui vous suivent\nh -> demander la liste des thématiques suivies\nq -> quitter l'application\nVotre choix : ");
+		printf("t -> twitter\na -> attendre un tweet\ns -> suivre un utilisateur\nr -> suivre une thématique\nu -> demander la liste des utilisateurs suivis\nv -> demander la liste des utilisateurs qui vous suivent\nh -> demander la liste des thématiques suivies\nq -> quitter l'application\nVotre choix : ");
 		answer = getchar();
-		if (answer && (answer=='t' || answer=='s' ||answer=='r' ||answer=='u' || answer=='v' || answer=='h' || answer=='q')) {
+		if (answer && (answer=='t' || answer=='a' || answer=='s' ||answer=='r' ||answer=='u' || answer=='v' || answer=='h' || answer=='q')) {
 		  cont = 1;
 		} else {
 		  printf("\nVotre entrée n'est pas correcte. Réessayez.\n");
@@ -415,6 +431,9 @@ int menuConnecte() {
 	  switch (answer) {
 		case 't' :
 			twitter();
+			break;
+		case 'a' :
+			attendre_tweet();
 			break;
 		case 's' :
 			suivre_utilisateur();
