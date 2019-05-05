@@ -20,6 +20,8 @@ int serverSocket,servlen,n,retread;
 struct sockaddr_in6 serv_addr;
 char bufSend[MAXLINE];
 char bufRecv[MAXLINE];
+char bufTweet[MAXLINE];
+int tweetRecu=0;
 struct hostent *hp;
 
 
@@ -218,7 +220,7 @@ int envoyer(int type, char* message) {
 	return send_size;
 }
 
-int quitter() {
+void quitter() {
 	envoyer(2,"");
 	close(serverSocket);
 	exit(0);
@@ -243,6 +245,17 @@ int suivre_utilisateur() {
 		int type = bufRecv[0];
         char* message = &bufRecv[1];
          //affInfo(bufRecv);
+		 
+			while (type==9) {
+				 printf("\nVous avez reçu un tweet :\n%s\n",message);
+				 if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
+					bufRecv[recv_size] = '\0';
+					type = bufRecv[0];
+					message = &bufRecv[1];
+					 //affInfo(bufRecv);
+				 }
+			 }
+		 
         if (type==4 && message[0]=='\0') {
 			printf("\nL'utilisateur est bien suivi\n");
         } else {
@@ -267,6 +280,17 @@ int suivre_thematique() {
 		int type = bufRecv[0];
         char* message = &bufRecv[1];
          //affInfo(bufRecv);
+		 
+			while (type==9) {
+				 printf("\nVous avez reçu un tweet :\n%s\n",message);
+				 if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
+					bufRecv[recv_size] = '\0';
+					type = bufRecv[0];
+					message = &bufRecv[1];
+					 //affInfo(bufRecv);
+				 }
+			 }
+		 
         if (type==5 && message[0]=='\0') {
 			printf("\nLa thématique est bien suivi\n");
         } else {
@@ -282,7 +306,7 @@ int demander_utilisateurs_suivis() {
 	char toSend[2];
 	int arreter = 0;
 	
-	printf("\nVoici les utilisateurs que vous suivez :\n");
+	
 	
 	while (!arreter) {
 		toSend[0] = (char) numpage;
@@ -295,6 +319,17 @@ int demander_utilisateurs_suivis() {
 			int type = bufRecv[0];
 			char* message = &bufRecv[1];
 			//affInfo(bufRecv);
+			
+			while (type==9) {
+				 printf("\nVous avez reçu un tweet :\n%s\n",message);
+				 if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
+					bufRecv[recv_size] = '\0';
+					type = bufRecv[0];
+					message = &bufRecv[1];
+					 //affInfo(bufRecv);
+				 }
+			 }
+			
 			if (type==6 && message[0]!='\0') {
 				//affInfo(bufRecv);
 				numpage++;
@@ -326,6 +361,17 @@ int demander_utilisateurs_qui_suivent() {
 			int type = bufRecv[0];
 			char* message = &bufRecv[1];
 			//affInfo(bufRecv);
+			
+			while (type==9) {
+				 printf("\nVous avez reçu un tweet :\n%s\n",message);
+				 if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
+					bufRecv[recv_size] = '\0';
+					type = bufRecv[0];
+					message = &bufRecv[1];
+					 //affInfo(bufRecv);
+				 }
+			 }
+			
 			if (type==8 && message[0]!='\0') {
 				//affInfo(bufRecv);
 				numpage++;
@@ -357,6 +403,17 @@ int demander_thematiques_suivies() {
 			int type = bufRecv[0];
 			char* message = &bufRecv[1];
 			//affInfo(bufRecv);
+			
+			while (type==9) {
+				 printf("\nVous avez reçu un tweet :\n%s\n",message);
+				 if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
+					bufRecv[recv_size] = '\0';
+					type = bufRecv[0];
+					message = &bufRecv[1];
+					 //affInfo(bufRecv);
+				 }
+			 }
+			
 			if (type==7 && message[0]!='\0') {
 				//affInfo(bufRecv);
 				numpage++;
@@ -401,6 +458,17 @@ int twitter() {
 		int type = bufRecv[0];
         char* message = &bufRecv[1];
          //affInfo(bufRecv);
+		 
+		 while (type==9) {
+			 printf("\nVous avez reçu un tweet :\n%s\n",message);
+			 if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
+				bufRecv[recv_size] = '\0';
+				type = bufRecv[0];
+				message = &bufRecv[1];
+				 //affInfo(bufRecv);
+			 }
+		 }
+		 
         if (type==3 && message[0]=='\0') {
 			printf("\nLe tweet est bien envoyé\n");
         } else {
@@ -419,7 +487,7 @@ int menuConnecte() {
 	  cont=0;
 	  printf("\nQue voulez vous faire ?\n");
 	  while (!cont) {
-		printf("t -> twitter\na -> attendre un tweet\ns -> suivre un utilisateur\nr -> suivre une thématique\nu -> demander la liste des utilisateurs suivis\nv -> demander la liste des utilisateurs qui vous suivent\nh -> demander la liste des thématiques suivies\nq -> quitter l'application\nVotre choix : ");
+		printf("t -> twitter\na -> attendre un tweet\nf -> suivre un utilisateur\ns -> suivre une thématique\nu -> demander la liste des utilisateurs suivis\nv -> demander la liste des utilisateurs qui vous suivent\nh -> demander la liste des thématiques suivies\nq -> quitter l'application\nVotre choix : ");
 		answer = getchar();
 		if (answer && (answer=='t' || answer=='a' || answer=='s' ||answer=='r' ||answer=='u' || answer=='v' || answer=='h' || answer=='q')) {
 		  cont = 1;
@@ -435,10 +503,10 @@ int menuConnecte() {
 		case 'a' :
 			attendre_tweet();
 			break;
-		case 's' :
+		case 'f' :
 			suivre_utilisateur();
 		  break;
-		case 'r' :
+		case 's' :
 			suivre_thematique();
 		  break;
 		case 'u' :
@@ -572,13 +640,11 @@ int connexion(char *addIp, int port) {
 		perror("erreur socket");
 		exit(1);
 	}
-	printf("avant connect");
 	//on connecte la socket
 	if(connect(serverSocket,(struct sockaddr *) &serv_addr,sizeof(serv_addr))<0){
 		perror("erreur connect");
 		exit(1);
 	}
-	printf("apres connect");
   return 0;
 }
 
@@ -645,7 +711,7 @@ int main(int argc, char **argv){
   sigaction(SIGINT,  &nvt, &old);
 
 	connexion(addIp, port);
-
+	
 	afficherMascotte();
 	menuPrincipal();
 
