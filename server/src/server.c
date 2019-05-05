@@ -22,9 +22,15 @@
 #define LIST_FOLLOWERS 8
 #define SHARE 9
 
+static char* path;
+static int base_length;
+static FILE* stream;
 static int server_socket;
+static int client_socket;
 static int client_sockets[FD_SETSIZE];
 static char* client_users[FD_SETSIZE];
+static char recv_buff[LENGTH + 2];
+static char send_buff[LENGTH + 2];
 
 int test_identifier(char* string) {
 	for (int i = 0; string[i] != '\0'; i++) {
@@ -40,9 +46,8 @@ int test_identifier(char* string) {
 	return 0;
 }
 
-int response(int client_socket, int type, char* message) {
+int response(int client_socket, char type, char* message) {
 	int send_size = (strlen(message) + 2) * sizeof(char);
-	char* send_buff = malloc(send_size);
 	send_buff[0] = type;
 	strcpy(&send_buff[1], message);
 	if (send(client_socket, send_buff, send_size, 0) >= 2) {
@@ -50,7 +55,6 @@ int response(int client_socket, int type, char* message) {
 	} else {
 		send_size = 1;
 	}
-	free(send_buff);
 	return send_size;
 }
 
@@ -77,31 +81,22 @@ int sign_up(int index, char* message) {
 	if (test_identifier(password)) {
 		return response(client_socket, SIGN_UP, "Invalid password");
 	}
-	char* home = getpwuid(getuid())->pw_dir;
-	int home_length = strlen(home);
 	int message_length = strlen(message);
-	int path_length = home_length + 13 + message_length;
-	char* path = malloc((path_length + 15) * sizeof(char));
-	strcpy(path, home);
-	strcpy(&path[home_length], "/.my-twitter/");
-	mkdir(path, 0700);
-	strcpy(&path[home_length + 13], message);
+	int user_length = base_length + message_length;
+	strcpy(&path[base_length], message);
 	if (!~mkdir(path, 0700)) {
-		free(path);
 		return response(client_socket, SIGN_UP, "User name not available");
 	}
-	path[path_length] = '/';
-	strcpy(&path[path_length + 1], "password.txt");
-	FILE* stream = fopen(path, "w");
+	strcpy(&path[user_length], "/password.txt");
+	stream = fopen(path, "w");
 	fprintf(stream, "%s\n", password);
-	fclose(stream);
-	strcpy(&path[path_length + 1], "users.txt");
+	fclose(stream), stream = NULL;
+	strcpy(&path[user_length], "/users.txt");
 	fclose(fopen(path, "w"));
-	strcpy(&path[path_length + 1], "tags.txt");
+	strcpy(&path[user_length], "/tags.txt");
 	fclose(fopen(path, "w"));
-	strcpy(&path[path_length + 1], "followers.txt");
+	strcpy(&path[user_length], "/followers.txt");
 	fclose(fopen(path, "w"));
-	free(path);
 	client_users[index] = malloc((message_length + 1) * sizeof(char));
 	strcpy(client_users[index], message);
 	return response(client_socket, SIGN_UP, "");
@@ -130,23 +125,17 @@ int sign_in(int index, char* message) {
 	if (test_identifier(password)) {
 		return response(client_socket, SIGN_IN, "Invalid password");
 	}
-	char* home = getpwuid(getuid())->pw_dir;
-	int home_length = strlen(home);
 	int message_length = strlen(message);
-	int path_length = home_length + 13 + message_length;
-	char* path = malloc((path_length + 15) * sizeof(char));
-	strcpy(path, home);
-	strcpy(&path[home_length], "/.my-twitter/");
-	strcpy(&path[home_length + 13], message);
-	strcpy(&path[path_length], "/password.txt");
-	FILE* stream = fopen(path, "r");
+	int user_length = base_length + message_length;
+	strcpy(&path[base_length], message);
+	strcpy(&path[user_length], "/password.txt");
+	stream = fopen(path, "r");
 	if (stream == NULL) {
 		return response(client_socket, SIGN_IN, "Incorrect user name");
 	}
-	char line[139];
+	char line[LENGTH + 1];
 	fscanf(stream, "%[^\n]\n", line);
-	fclose(stream);
-	free(path);
+	fclose(stream), stream = NULL;
 	if (strcmp(line, password)) {
 		return response(client_socket, SIGN_IN, "Incorrect password");
 	}
@@ -175,17 +164,11 @@ int tweet(int index, char* message) {
 	}
 	fd_set shares;
 	FD_ZERO(&shares);
-	char* home = getpwuid(getuid())->pw_dir;
-	int home_length = strlen(home);
-	int user_length = strlen(client_user);
-	int path_length = home_length + 13 + user_length;
-	char* path = malloc((path_length + 15) * sizeof(char));
-	strcpy(path, home);
-	strcpy(&path[home_length], "/.my-twitter/");
-	strcpy(&path[home_length + 13], client_user);
-	strcpy(&path[path_length], "/followers.txt");
-	FILE* stream = fopen(path, "r");
-	char line[141];
+	int user_length = base_length + strlen(client_user);
+	strcpy(&path[base_length], client_user);
+	strcpy(&path[user_length], "/followers.txt");
+	stream = fopen(path, "r");
+	char line[LENGTH + 1];
 	while (fscanf(stream, "%[^\n]\n", line) != EOF) {
 		for (int i = 0; i < FD_SETSIZE; i++) {
 			if (i != index) {
@@ -198,7 +181,7 @@ int tweet(int index, char* message) {
 			}
 		}
 	}
-	fclose(stream);
+	fclose(stream), stream = NULL;
 	for (int i = 0; message[i] != '\0'; i++) {
 		if (message[i] == '#') {
 			int j = ++i;
@@ -212,7 +195,7 @@ int tweet(int index, char* message) {
 				j++;
 			}
 			if (j != i) {
-				char* tag = malloc((j - i + 1) * sizeof(char));
+				char tag[LENGTH + 1];
 				strncpy(tag, &message[i], (j - i) * sizeof(char));
 				tag[j - i] = '\0';
 				for (int k = 0; k < FD_SETSIZE; k++) {
@@ -221,11 +204,9 @@ int tweet(int index, char* message) {
 						if (client_user != NULL) {
 							int client_socket = client_sockets[k];
 							if (!FD_ISSET(client_socket, &shares)) {
-								user_length = strlen(client_user);
-								path_length = home_length + 13 + user_length;
-								path = realloc(path, (path_length + 12) * sizeof(char));
-								strcpy(&path[home_length + 13], client_user);
-								strcpy(&path[path_length], "/tags.txt");
+								user_length = base_length + strlen(client_user);
+								strcpy(&path[base_length], client_user);
+								strcpy(&path[user_length], "/tags.txt");
 								stream = fopen(path, "r");
 								while (fscanf(stream, "%[^\n]\n", line) != EOF) {
 									if (!strcmp(line, tag)) {
@@ -234,17 +215,15 @@ int tweet(int index, char* message) {
 										break;
 									}
 								}
-								fclose(stream);
+								fclose(stream), stream = NULL;
 							}
 						}
 					}
 				}
-				free(tag);
 				i = j;
 			}
 		}
 	}
-	free(path);
 	return response(client_sockets[index], TWEET, "");
 }
 
@@ -260,46 +239,33 @@ int follow_user(int index, char* message) {
 	if (!strcmp(message, client_user)) {
 		return response(client_socket, FOLLOW_USER, "User is you");
 	}
-	char* home = getpwuid(getuid())->pw_dir;
-	int home_length = strlen(home);
-	int user_length = strlen(message);
-	int path_length = home_length + 13 + user_length;
-	char* path = malloc((path_length + 15) * sizeof(char));
-	strcpy(path, home);
-	strcpy(&path[home_length], "/.my-twitter/");
-	strcpy(&path[home_length + 13], message);
-	strcpy(&path[path_length], "/password.txt");
-	FILE* stream = fopen(path, "r");
+	int user_length = base_length + strlen(message);
+	strcpy(&path[base_length], message);
+	strcpy(&path[user_length], "/password.txt");
+	stream = fopen(path, "r");
 	if (stream == NULL) {
-		free(path);
 		return response(client_socket, FOLLOW_USER, "Incorrect user name");
 	}
-	fclose(stream);
-	user_length = strlen(client_user);
-	path_length = home_length + 13 + user_length;
-	path = realloc(path, (path_length + 11) * sizeof(char));
-	strcpy(&path[home_length + 13], client_user);
-	strcpy(&path[path_length], "/users.txt");
+	fclose(stream), stream = NULL;
+	user_length = base_length + strlen(client_user);
+	strcpy(&path[base_length], client_user);
+	strcpy(&path[user_length], "/users.txt");
 	stream = fopen(path, "a+");
-	char line[139];
+	char line[LENGTH + 1];
 	while (fscanf(stream, "%[^\n]\n", line) != EOF) {
 		if (!strcmp(line, message)) {
-			fclose(stream);
-			free(path);
+			fclose(stream), stream = NULL;
 			return response(client_socket, FOLLOW_USER, "User already followed");
 		}
 	}
 	fprintf(stream, "%s\n", message);
-	fclose(stream);
-	user_length = strlen(message);
-	path_length = home_length + 13 + user_length;
-	path = realloc(path, (path_length + 15) * sizeof(char));
-	strcpy(&path[home_length + 13], message);
-	strcpy(&path[path_length], "/followers.txt");
+	fclose(stream), stream = NULL;
+	user_length = base_length + strlen(message);
+	strcpy(&path[base_length], message);
+	strcpy(&path[user_length], "/followers.txt");
 	stream = fopen(path, "a");
 	fprintf(stream, "%s\n", client_user);
-	fclose(stream);
-	free(path);
+	fclose(stream), stream = NULL;
 	return response(client_socket, FOLLOW_USER, "");
 }
 
@@ -312,26 +278,19 @@ int follow_tag(int index, char* message) {
 	if (test_identifier(message)) {
 		return response(client_socket, FOLLOW_TAG, "Invalid tag");
 	}
-	char* home = getpwuid(getuid())->pw_dir;
-	int home_length = strlen(home);
-	int user_length = strlen(client_user);
-	int path_length = home_length + 13 + user_length;
-	char* path = malloc((path_length + 15) * sizeof(char));
-	strcpy(path, home);
-	strcpy(&path[home_length], "/.my-twitter/");
-	strcpy(&path[home_length + 13], client_user);
-	strcpy(&path[path_length], "/tags.txt");
-	FILE* stream = fopen(path, "a+");
-	free(path);
-	char line[141];
+	int user_length = base_length + strlen(client_user);
+	strcpy(&path[base_length], client_user);
+	strcpy(&path[user_length], "/tags.txt");
+	stream = fopen(path, "a+");
+	char line[LENGTH + 1];
 	while (fscanf(stream, "%[^\n]\n", line) != EOF) {
 		if (!strcmp(line, message)) {
-			fclose(stream);
+			fclose(stream), stream = NULL;
 			return response(client_socket, FOLLOW_TAG, "Tag already followed");
 		}
 	}
 	fprintf(stream, "%s\n", message);
-	fclose(stream);
+	fclose(stream), stream = NULL;
 	return response(client_socket, FOLLOW_TAG, "");
 }
 
@@ -341,18 +300,11 @@ int list_followed_users(int index, char* message) {
 	if (client_user == NULL || message[0] == '\0' || message[1] != '\0') {
 		return response(client_socket, LIST_FOLLOWED_USERS, "");
 	}
-	char* home = getpwuid(getuid())->pw_dir;
-	int home_length = strlen(home);
-	int user_length = strlen(client_user);
-	int path_length = home_length + 13 + user_length;
-	char* path = malloc((path_length + 15) * sizeof(char));
-	strcpy(path, home);
-	strcpy(&path[home_length], "/.my-twitter/");
-	strcpy(&path[home_length + 13], client_user);
-	strcpy(&path[path_length], "/users.txt");
-	FILE* stream = fopen(path, "r");
-	free(path);
-	unsigned int count = message[0];
+	int user_length = base_length + strlen(client_user);
+	strcpy(&path[base_length], client_user);
+	strcpy(&path[user_length], "/users.txt");
+	stream = fopen(path, "r");
+	char count = message[0];
 	int size = 0;
 	char line[LENGTH * 2 + 2];
 	while (fscanf(stream, "%[^\n]\n", &line[size]) != EOF) {
@@ -371,7 +323,7 @@ int list_followed_users(int index, char* message) {
 			break;
 		}
 	}
-	fclose(stream);
+	fclose(stream), stream = NULL;
 	if (count - 1) {
 		line[0] = '\0';
 	} else {
@@ -386,20 +338,13 @@ int list_followed_tags(int index, char* message) {
 	if (client_user == NULL || message[0] == '\0' || message[1] != '\0') {
 		return response(client_socket, LIST_FOLLOWED_TAGS, "");
 	}
-	char* home = getpwuid(getuid())->pw_dir;
-	int home_length = strlen(home);
-	int user_length = strlen(client_user);
-	int path_length = home_length + 13 + user_length;
-	char* path = malloc((path_length + 15) * sizeof(char));
-	strcpy(path, home);
-	strcpy(&path[home_length], "/.my-twitter/");
-	strcpy(&path[home_length + 13], client_user);
-	strcpy(&path[path_length], "/tags.txt");
-	FILE* stream = fopen(path, "r");
-	free(path);
-	unsigned int count = message[0];
+	int user_length = base_length + strlen(client_user);
+	strcpy(&path[base_length], client_user);
+	strcpy(&path[user_length], "/tags.txt");
+	stream = fopen(path, "r");
+	char count = message[0];
 	int size = 0;
-	char line[LENGTH * 2 + 2];
+	char line[(LENGTH * 1) * 2];
 	while (fscanf(stream, "%[^\n]\n", &line[size]) != EOF) {
 		int length = strlen(&line[size]);
 		if (size + length <= LENGTH) {
@@ -416,7 +361,7 @@ int list_followed_tags(int index, char* message) {
 			break;
 		}
 	}
-	fclose(stream);
+	fclose(stream), stream = NULL;
 	if (count - 1) {
 		line[0] = '\0';
 	} else {
@@ -431,20 +376,13 @@ int list_followers(int index, char* message) {
 	if (client_user == NULL || message[0] == '\0' || message[1] != '\0') {
 		return response(client_socket, LIST_FOLLOWERS, "");
 	}
-	char* home = getpwuid(getuid())->pw_dir;
-	int home_length = strlen(home);
-	int user_length = strlen(client_user);
-	int path_length = home_length + 13 + user_length;
-	char* path = malloc((path_length + 15) * sizeof(char));
-	strcpy(path, home);
-	strcpy(&path[home_length], "/.my-twitter/");
-	strcpy(&path[home_length + 13], client_user);
-	strcpy(&path[path_length], "/followers.txt");
-	FILE* stream = fopen(path, "r");
-	free(path);
-	unsigned int count = message[0];
+	int user_length = base_length + strlen(client_user);
+	strcpy(&path[base_length], client_user);
+	strcpy(&path[user_length], "/followers.txt");
+	stream = fopen(path, "r");
+	char count = message[0];
 	int size = 0;
-	char line[LENGTH * 2 + 2];
+	char line[(LENGTH * 1) * 2];
 	while (fscanf(stream, "%[^\n]\n", &line[size]) != EOF) {
 		int length = strlen(&line[size]);
 		if (size + length <= LENGTH) {
@@ -461,7 +399,7 @@ int list_followers(int index, char* message) {
 			break;
 		}
 	}
-	fclose(stream);
+	fclose(stream), stream = NULL;
 	if (count - 1) {
 		line[0] = '\0';
 	} else {
@@ -472,10 +410,9 @@ int list_followers(int index, char* message) {
 
 int request(int index) {
 	int recv_size = (LENGTH + 2) * sizeof(char);
-	char* recv_buff = malloc(recv_size);
 	if ((recv_size = recv(client_sockets[index], recv_buff, recv_size, 0)) >= 2) {
 		recv_buff[recv_size] = '\0';
-		int type = recv_buff[0];
+		char type = recv_buff[0];
 		char* message = &recv_buff[1];
 		switch (type) {
 			case SIGN_UP: {
@@ -521,7 +458,6 @@ int request(int index) {
 	} else {
 		recv_size = 1;
 	}
-	free(recv_buff);
 	return recv_size;
 }
 
@@ -530,22 +466,40 @@ void stop(int signal) {
 		for (int i = 0; i < FD_SETSIZE; i++) {
 			char* client_user = client_users[i];
 			if (client_user != NULL) {
-				free(client_user);
+				free(client_user), client_user = NULL;
 			}
-			int client_socket = client_sockets[i];
-			if (client_socket != -1) {
-				response(client_socket, SIGN_OUT, "");
-				printf("Client %d disconnected\n", client_socket - server_socket - 1);
-				close(client_socket);
+			int current_client_socket = client_sockets[i];
+			if (current_client_socket != -1) {
+				response(current_client_socket, SIGN_OUT, "");
+				printf("Client %d disconnected\n", current_client_socket - server_socket - 1);
+				if (current_client_socket == client_socket) {
+					client_socket = -1;
+				}
+				close(current_client_socket), client_sockets[i] = -1;
 			}
 		}
-		close(server_socket);
+		if (client_socket != -1) {
+			response(client_socket, SIGN_OUT, "");
+			printf("Client %d disconnected\n", client_socket - server_socket - 1);
+			close(client_socket), client_socket = -1;
+		}
+		close(server_socket), server_socket = -1;
+	}
+	if (stream != NULL) {
+		fclose(stream), stream = NULL;
+	}
+	if (path != NULL) {
+		free(path), path = NULL;
 	}
 	exit(signal + 128);
 }
 
 int main(int argc, char* argv[]) {
+	path = NULL;
+	base_length = -1;
+	stream = NULL;
 	server_socket = -1;
+	client_socket = -1;
 	for (int i = 0; i < FD_SETSIZE; i++) {
 		client_sockets[i] = -1;
 		client_users[i] = NULL;
@@ -555,13 +509,18 @@ int main(int argc, char* argv[]) {
 	memset(&new, 0, sizeof(struct sigaction));
 	new.sa_handler = &stop;
 	sigaction(SIGINT, &new, &old);
-	/* Création d'une socket */
+	char* home = getpwuid(getuid())->pw_dir;
+	int home_length = strlen(home);
+	path = malloc((LENGTH + 28) * sizeof(char));
+	strcpy(path, home);
+	strcpy(&path[home_length], "/.my-twitter/");
+	mkdir(path, 0700);
+	base_length = home_length + 13;
 	if (!~(server_socket = socket(PF_INET, SOCK_STREAM, 0))) {
 		perror("`socket` error");
 		stop(-127);
 	}
 	socklen_t address_size = sizeof(struct sockaddr_in);
-	/* Attachement / nommage d'une socket */
 	struct sockaddr_in server_address;
 	memset(&server_address, 0, sizeof(struct sockaddr_in));
 	server_address.sin_family = PF_INET;
@@ -571,12 +530,10 @@ int main(int argc, char* argv[]) {
 		perror("`bind` error");
 		stop(-126);
 	}
-	/* Ouverture du service */
 	if (!~listen(server_socket, SOMAXCONN)) {
 		perror("`listen` error");
 		stop(-125);
 	}
-	int client_socket;
 	struct sockaddr_in client_address;
 	int socket_max = server_socket + 1;
 	int socket_index;
@@ -588,7 +545,6 @@ int main(int argc, char* argv[]) {
 	FD_SET(server_socket, &next_sockets);
 	for (;;) {
 		current_sockets = next_sockets;
-		/* Création des sockets de dialogue */
 		if (!~(socket_count = select(socket_max, &current_sockets, NULL, NULL, NULL))) {
 			perror("`select` error");
 			stop(-124);
@@ -601,7 +557,7 @@ int main(int argc, char* argv[]) {
 			socket_index = -1;
 			while (++socket_index < FD_SETSIZE && ~client_sockets[socket_index]);
 			if (socket_index == FD_SETSIZE) {
-				close(client_socket);
+				close(client_socket), client_socket = -1;
 			}
 			client_sockets[socket_index] = client_socket;
 			FD_SET(client_socket, &next_sockets);
@@ -611,29 +567,26 @@ int main(int argc, char* argv[]) {
 			socket_count--;
 			printf("Client %d connected\n", client_socket - server_socket - 1);
 		}
-		/* Échange de données */
 		socket_index = 0;
+		client_socket = -1;
 		while (socket_count > 0 && socket_index < FD_SETSIZE) {
 			if (~(client_socket = client_sockets[socket_index]) && FD_ISSET(client_socket, &current_sockets)) {
 				if (request(socket_index)) {
 					printf("Client %d disconnected\n", client_socket - server_socket - 1);
 					client_sockets[socket_index] = -1;
 					if (client_users[socket_index] != NULL) {
-						free(client_users[socket_index]);
-						client_users[socket_index] = NULL;
+						free(client_users[socket_index]), client_users[socket_index] = NULL;
 					}
 					if (socket_index == socket_max) {
 						while (--socket_max > server_socket + 1 && !~client_sockets[socket_max]);
 					}
 					FD_CLR(client_socket, &next_sockets);
-					close(client_socket);
+					close(client_socket), client_socket = -1;
 				}
 				socket_count--;
 			}
 			socket_index++;
 		}
 	}
-	/* Fermeture d'une socket */
-	close(server_socket);
 	return 0;
 }

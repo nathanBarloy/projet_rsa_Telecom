@@ -159,11 +159,11 @@ void affInfo(char *buff) {
 
 void afficherMascotte() {
 
-	char *turkey = "\n -----------------------------------------\n\
-/ Bienvenue sur lca contrefaçon Twitter ! \\\n\
-| Une application au top de la            |\n\
-\\ technologie !                           /\n\
- -----------------------------------------\n\
+	char *turkey = "\n ----------------------------------------\n\
+/ Bienvenue sur la contrefaçon Twitter ! \\\n\
+| Une application au top de la           |\n\
+\\ technologie !                          /\n\
+ ----------------------------------------\n\
   \\                                  ,+*^^*+___+++_\n\
    \\                           ,*^^^^              )\n\
     \\                       _+*                     ^**+_\n\
