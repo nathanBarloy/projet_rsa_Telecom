@@ -9,7 +9,6 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 
-#define PORT 2222
 #define LENGTH 140
 #define SIGN_UP 0
 #define SIGN_IN 1
@@ -516,16 +515,15 @@ int main(int argc, char* argv[]) {
 	strcpy(&path[home_length], "/.my-twitter/");
 	mkdir(path, 0700);
 	base_length = home_length + 13;
-	if (!~(server_socket = socket(PF_INET, SOCK_STREAM, 0))) {
+	if (!~(server_socket = socket(AF_INET6, SOCK_STREAM, 0))) {
 		perror("`socket` error");
 		stop(-127);
 	}
-	socklen_t address_size = sizeof(struct sockaddr_in);
-	struct sockaddr_in server_address;
-	memset(&server_address, 0, sizeof(struct sockaddr_in));
-	server_address.sin_family = PF_INET;
-	server_address.sin_addr.s_addr = htonl(INADDR_ANY);
-	server_address.sin_port = htons(PORT);
+	socklen_t address_size = sizeof(struct sockaddr_in6);
+	struct sockaddr_in6 server_address;
+	memset(&server_address, 0, address_size);
+	server_address.sin6_family = AF_INET6;
+	server_address.sin6_port = htons(argc > 1 ? atoi(argv[1]) : 2222);
 	if (!~bind(server_socket, (struct sockaddr*) &server_address, address_size)) {
 		perror("`bind` error");
 		stop(-126);
@@ -534,7 +532,7 @@ int main(int argc, char* argv[]) {
 		perror("`listen` error");
 		stop(-125);
 	}
-	struct sockaddr_in client_address;
+	struct sockaddr_in6 client_address;
 	int socket_max = server_socket + 1;
 	int socket_index;
 	int socket_count;
