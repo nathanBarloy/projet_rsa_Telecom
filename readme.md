@@ -1,8 +1,8 @@
 # *MyTwitter*
 
-# Manuel d'utilisation
+## Manuel d'utilisation
 
-## Construction
+### Construction
 
 Après avoir cloné le dépôt, construisez le client et le serveur en exécutant la commande suivante à la racine du projet :
 
@@ -10,9 +10,10 @@ Après avoir cloné le dépôt, construisez le client et le serveur en exécutan
 $ make build
 ```
 
-## Client
+### Client
 
 Pour lancer un client (écoutant le port `2222` du serveur à l'adresse `127.0.0.1` par défaut), exécutez la commande à la racine du projet :
+
 ```shell
 $ ./client
 ```
@@ -29,9 +30,10 @@ Il est également possible de spécifier un autre port comme ceci :
 $ ./client 192.168.1.1 4444
 ```
 
-## Serveur
+### Serveur
 
 Pour lancer un serveur (communiquant par le port `2222` par défaut), exécutez la commande à la racine du projet :
+
 ```shell
 $ ./server
 ```
@@ -42,9 +44,9 @@ Il est possible de spécifier un autre port comme ceci :
 $ ./server 4444
 ```
 
-# Spécification du protocole applicatif
+## Spécification du protocole applicatif
 
-## Généralités
+### Généralités
 
 Les messages envoyés par le client au serveur ou l'inverse ont un format similaire. Leur taille est comprise entre `2` et `142` octets :
 
@@ -63,9 +65,9 @@ On dispose dans cette version de `9` types de messages différents :
 - `0` (demande de création de compte) : les octets médians sont interprétés comme une chaîne de caractères et doivent respecter le format `<username>@<password>`, où `<username>` est un `<id>` (non vide) représentant le nom d'utilisateur et `<password>` un `<id>` (possiblement vide) représentant le mot de passe ;
 - `1` (demande d'authentification) : même format que pour le type `0` ;
 - `2` (demande de déconnexion) : le nombre d'octets médians doit être `0` ;
-- `3` (envoi de *tweet*) : les octets médians sont interprétés comme une chaîne de caractères représentant le contenu du *tweet*, dont chaque sous-chaîne de la forme `#<tag>`, où `<tag>` est un `<id>` (non vide et de taille maximale), représente une citation de la thématique de nom `<tag>` ;
+- `3` (envoi de *tweet*) : les octets médians sont interprétés comme une chaîne de caractères représentant le contenu du *tweet*, dont chaque sous-chaîne de la forme `#<tagname>`, où `<tagname>` est un `<id>` (non vide et de taille maximale), représente une citation de la thématique de nom `<tagname>` ;
 - `4` (demande de suivi d'utilisateur) : les octets médians sont interprétés comme une chaîne de caractères et doivent respecter le format `<username>`, où `<username>` est un `<id>` (non vide) représentant un nom d'utilisateur ;
-- `5` (demande de suivi de thématique) : les octets médians sont interprétés comme une chaîne de caractères et doivent respecter le format `<tag>` où `<tag>` est un `<id>` (non vide) représentant un nom de thématique ;
+- `5` (demande de suivi de thématique) : les octets médians sont interprétés comme une chaîne de caractères et doivent respecter le format `<tagname>` où `<tagname>` est un `<id>` (non vide) représentant un nom de thématique ;
 - `6` (demande de listage des utilisateurs suivis) : le nombre d'octets médians doit être `1` et l'unique octet médian est interprété comme un entier (non signé et non nul) représentant le numéro de page ;
 - `7` (demande de listage des thématiques suivies) : même format que pour le type `6` ;
 - `8` (demande de listage des utilisateurs suivants) : même format que pour le type `6`.
@@ -83,7 +85,7 @@ On dispose dans cette version de `10` types de messages différents :
 - `4` (acquittement de demande de suivi d'utilisateur) : le nombre d'octets médians doit être `0` si et seulement si le suivi est désormais effectif ;
 - `5` (acquittement de demande de suivi de thématique) : même format que pour le type `4` ;
 - `6` (réponse à demande de listage des utilisateurs suivis) : les octets médians sont interprétés comme une chaîne de caractères et doivent respecter le format `(<username>(,<username>)*)?` où `<username>` est un `<id>` (non vide) représentant un nom d'utilisateur ;
-- `7` (réponse à demande de listage des thématiques suivies) : les octets médians sont interprétés comme une chaîne de caractères et doivent respecter le format `(<tag>(,<tag>)*)?` où `<tag>` est un `<id>` (non vide) représentant un nom de thématique ;
+- `7` (réponse à demande de listage des thématiques suivies) : les octets médians sont interprétés comme une chaîne de caractères et doivent respecter le format `(<tagname>(,<tagname>)*)?` où `<tagname>` est un `<id>` (non vide) représentant un nom de thématique ;
 - `8` (réponse à demande de listage des utilisateurs suivants) : même format que pour le type `6` ;
 - `9` (notification de réception de *tweet*) : même format que pour le type `3` décrit dans la partie précédente.
 
