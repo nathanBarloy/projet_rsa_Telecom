@@ -353,13 +353,13 @@ void stop(int signal) {
 			int client_socket = client_sockets[i];
 			if (client_socket != -1) {
 				response(client_socket, SIGN_OUT, "");
-				printf("Déconnexion client (socket %d)\n", client_socket);
+				printf("Client %d disconnected\n", client_socket - server_socket - 1);
 				close(client_socket);
 			}
 		}
 		close(server_socket);
 	}
-	exit(0);
+	exit(signal + 128);
 }
 
 int main(int argc, char* argv[]) {
@@ -375,9 +375,8 @@ int main(int argc, char* argv[]) {
 	sigaction(SIGINT, &new, &old);
 	/* Création d'une socket */
 	if (!~(server_socket = socket(PF_INET, SOCK_STREAM, 0))) {
-		perror("Server echo: socket error\n");
-		stop(SIGINT);
-		return 1;
+		perror("`socket` error");
+		stop(-127);
 	}
 	socklen_t address_size = sizeof(struct sockaddr_in);
 	/* Attachement / nommage d'une socket */
@@ -387,15 +386,13 @@ int main(int argc, char* argv[]) {
 	server_address.sin_addr.s_addr = htonl(INADDR_ANY);
 	server_address.sin_port = htons(PORT);
 	if (!~bind(server_socket, (struct sockaddr*) &server_address, address_size)) {
-		perror("Server echo: bind error\n");
-		stop(SIGINT);
-		return 2;
+		perror("`bind` error");
+		stop(-126);
 	}
 	/* Ouverture du service */
 	if (!~listen(server_socket, SOMAXCONN)) {
-		perror("Server echo: listen error\n");
-		stop(SIGINT);
-		return 3;
+		perror("`listen` error");
+		stop(-125);
 	}
 	int client_socket;
 	struct sockaddr_in client_address;
@@ -411,15 +408,13 @@ int main(int argc, char* argv[]) {
 		current_sockets = next_sockets;
 		/* Création des sockets de dialogue */
 		if (!~(socket_count = select(socket_max, &current_sockets, NULL, NULL, NULL))) {
-			perror("Server echo: select error\n");
-			stop(SIGINT);
-			return 4;
+			perror("`select` error");
+			stop(-124);
 		}
 		if (FD_ISSET(server_socket, &current_sockets)) {
 			if (!~(client_socket = accept(server_socket, (struct sockaddr*) &client_address, &address_size))) {
-				perror("Server echo: accept error\n");
-				stop(SIGINT);
-				return 5;
+				perror("`accept` error");
+				stop(-123);
 			}
 			socket_index = -1;
 			while (++socket_index < FD_SETSIZE && ~client_sockets[socket_index]);
@@ -432,14 +427,14 @@ int main(int argc, char* argv[]) {
 				socket_max = client_socket + 1;
 			}
 			socket_count--;
-			printf("Connexion client (socket %d)\n", client_socket);
+			printf("Client %d connected\n", client_socket - server_socket - 1);
 		}
 		/* Échange de données */
 		socket_index = 0;
 		while (socket_count > 0 && socket_index < FD_SETSIZE) {
 			if (~(client_socket = client_sockets[socket_index]) && FD_ISSET(client_socket, &current_sockets)) {
 				if (request(socket_index)) {
-					printf("Déconnexion client (socket %d)\n", client_socket);
+					printf("Client %d disconnected\n", client_socket - server_socket - 1);
 					client_sockets[socket_index] = -1;
 					if (client_users[socket_index] != NULL) {
 						free(client_users[socket_index]);
