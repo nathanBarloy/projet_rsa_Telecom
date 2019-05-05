@@ -192,7 +192,17 @@ void afficherMascotte() {
     printf("%s\n",turkey);
 }
 
-
+void afficher_liste(char *liste) {
+    // Returns first token 
+    char* token = strtok(liste, ","); 
+  
+    // Keep printing tokens while one of the 
+    // delimiters present in liste. 
+    while (token != NULL) { 
+        printf("%s\n", token); 
+        token = strtok(NULL, ","); 
+    } 
+}
 
 int envoyer(int type, char* message) {
 	int send_size = (strlen(message) + 2) * sizeof(char);
@@ -268,55 +278,98 @@ int suivre_thematique() {
 }
 
 int demander_utilisateurs_suivis() {
+	int numpage = 1;
+	char toSend[2];
+	int arreter = 0;
+	
+	printf("\nVoici les utilisateurs que vous suivez :\n");
+	
+	while (!arreter) {
+		toSend[0] = (char) numpage;
+		toSend[1] = '\0';
+		envoyer(6,toSend);
 
-  envoyer(6,"\1");
-
-  int recv_size;
-  if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
-    bufRecv[recv_size] = '\0';
-    int type = bufRecv[0];
-    char* message = &bufRecv[1];
-    //affInfo(bufRecv);
-    if (type==6) {
-      //TODO Afficher la liste
-    }
-  }
-  return 0;
+		int recv_size;
+		if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
+			bufRecv[recv_size] = '\0';
+			int type = bufRecv[0];
+			char* message = &bufRecv[1];
+			//affInfo(bufRecv);
+			if (type==6 && message[0]!='\0') {
+				//affInfo(bufRecv);
+				numpage++;
+				afficher_liste(message);
+			} else {
+				arreter = 1;
+			}
+		}
+	}
+	printf("\n");
+	return 0;
 }
 
 
 int demander_utilisateurs_qui_suivent() {
+	int numpage = 1;
+	char toSend[2];
+	int arreter = 0;
+	
+	printf("\nVoici les utilisateurs qui vous suivent :\n");
+	
+	while (!arreter) {
+		toSend[0] = (char) numpage;
+		toSend[1] = '\0';
+		envoyer(8,toSend);
 
-  envoyer(8,"\1");
-
-  int recv_size;
-  if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
-    bufRecv[recv_size] = '\0';
-    int type = bufRecv[0];
-    char* message = &bufRecv[1];
-    //affInfo(bufRecv);
-    if (type==8) {
-      //TODO Afficher la liste
-    }
-  }
-  return 0;
+		int recv_size;
+		if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
+			bufRecv[recv_size] = '\0';
+			int type = bufRecv[0];
+			char* message = &bufRecv[1];
+			//affInfo(bufRecv);
+			if (type==8 && message[0]!='\0') {
+				//affInfo(bufRecv);
+				numpage++;
+				afficher_liste(message);
+			} else {
+				arreter = 1;
+			}
+		}
+	}
+	printf("\n");
+	return 0;
 }
 
 
 int demander_thematiques_suivies() {
-  envoyer(7,"\1");
+	int numpage = 1;
+	char toSend[2];
+	int arreter = 0;
+	
+	printf("\nVoici les thématiques que vous suivez :\n");
+	
+	while (!arreter) {
+		toSend[0] = (char) numpage;
+		toSend[1] = '\0';
+		envoyer(7,toSend);
 
-  int recv_size;
-  if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
-    bufRecv[recv_size] = '\0';
-    int type = bufRecv[0];
-    char* message = &bufRecv[1];
-    //affInfo(bufRecv);
-    if (type==7) {
-      //TODO Afficher la liste
-    }
-  }
-  return 0;
+		int recv_size;
+		if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
+			bufRecv[recv_size] = '\0';
+			int type = bufRecv[0];
+			char* message = &bufRecv[1];
+			//affInfo(bufRecv);
+			if (type==7 && message[0]!='\0') {
+				//affInfo(bufRecv);
+				numpage++;
+				afficher_liste(message);
+			} else {
+				arreter = 1;
+			}
+		}
+	}
+	printf("\n");
+	return 0;
 }
 
 
