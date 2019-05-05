@@ -336,10 +336,51 @@ int follow_tag(int index, char* message) {
 }
 
 int list_followed_users(int index, char* message) {
-	if (client_users[index] == NULL) {
-		return response(client_sockets[index], LIST_FOLLOWED_USERS, "User not signed in");
+	int client_socket = client_sockets[index];
+	char* client_user = client_users[index];
+	if (client_user == NULL) {
+		return response(client_socket, LIST_FOLLOWED_USERS, "User not signed in");
 	}
-	return 0;
+	if (message[0] == '\0' || message[1] != '\0') {
+		return response(client_socket, LIST_FOLLOWED_USERS, "Invalid page");
+	}
+	char* home = getpwuid(getuid())->pw_dir;
+	int home_length = strlen(home);
+	int user_length = strlen(client_user);
+	int path_length = home_length + 13 + user_length;
+	char* path = malloc((path_length + 13) * sizeof(char));
+	strcpy(path, home);
+	strcpy(&path[home_length], "/.my-twitter/");
+	strcpy(&path[home_length + 13], client_user);
+	strcpy(&path[path_length], "/users.txt");
+	FILE* stream = fopen(path, "r");
+	free(path);
+	unsigned int count = message[0];
+	int size = 0;
+	char line[LENGTH * 2 + 2];
+	while (fscanf(stream, "%[^\n]\n", &line[size]) != EOF) {
+		int length = strlen(&line[size]);
+		if (size + length <= LENGTH) {
+			size += length;
+			line[size++] = ',';
+		} else if (count - 1) {
+			count--;
+			for (int i = 0; i < length; i++) {
+				line[i] = line[size + i];
+			}
+			size = length;
+			line[size++] = ',';
+		} else {
+			break;
+		}
+	}
+	fclose(stream);
+	if (count - 1) {
+		line[0] = '\0';
+	} else {
+		line[size ? size - 1 : 0] = '\0';
+	}
+	return response(client_socket, LIST_FOLLOWED_USERS, line);
 }
 
 int list_followed_tags(int index, char* message) {

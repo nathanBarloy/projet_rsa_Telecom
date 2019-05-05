@@ -63,9 +63,9 @@ int compter_thematiques(char *texte) {
           }
           break;
 
-      } 
+      }
 
-      
+
     } while (c!='\0');
 
     return nbThematique;
@@ -134,9 +134,9 @@ char **recherche_thematiques(char *texte) {
           }
           break;
 
-      } 
+      }
 
-      
+
     } while (c!='\0');
     return res;
 }
@@ -222,11 +222,11 @@ void Recuperation(int sig) {
 int suivre_utilisateur() {
 	printf("\nNom de l'utilisateur à suivre : ");
 	char name[MAXLINE];
-	
+
 	scanf("%s",name);
-	
+
 	envoyer(4,name);
-	
+
 	int recv_size;
     if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
 		bufRecv[recv_size] = '\0';
@@ -246,11 +246,11 @@ int suivre_utilisateur() {
 int suivre_thematique() {
 	printf("\nNom de la thématique à suivre : ");
 	char name[MAXLINE];
-	
+
 	scanf("%s",name);
-	
+
 	envoyer(5,name);
-	
+
 	int recv_size;
     if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
 		bufRecv[recv_size] = '\0';
@@ -269,18 +269,16 @@ int suivre_thematique() {
 
 int demander_utilisateurs_suivis() {
 
-  envoyer(7,"");
-  
+  envoyer(6,"\1");
+
   int recv_size;
   if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
     bufRecv[recv_size] = '\0';
     int type = bufRecv[0];
     char* message = &bufRecv[1];
     //affInfo(bufRecv);
-    if (type==7 && message[0]=='\0') {
+    if (type==6) {
       //TODO Afficher la liste
-    } else {
-      printf("\nerreur : %s\n\n",message);
     }
   }
   return 0;
@@ -289,7 +287,7 @@ int demander_utilisateurs_suivis() {
 
 int demander_utilisateurs_qui_suivent() {
 
-  envoyer(6,"");
+  envoyer(8,"\1");
 
   int recv_size;
   if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
@@ -297,10 +295,8 @@ int demander_utilisateurs_qui_suivent() {
     int type = bufRecv[0];
     char* message = &bufRecv[1];
     //affInfo(bufRecv);
-    if (type==6 && message[0]=='\0') {
+    if (type==8) {
       //TODO Afficher la liste
-    } else {
-      printf("\nerreur : %s\n\n",message);
     }
   }
   return 0;
@@ -308,7 +304,7 @@ int demander_utilisateurs_qui_suivent() {
 
 
 int demander_thematiques_suivies() {
-  envoyer(8,"");
+  envoyer(7,"\1");
 
   int recv_size;
   if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
@@ -316,10 +312,8 @@ int demander_thematiques_suivies() {
     int type = bufRecv[0];
     char* message = &bufRecv[1];
     //affInfo(bufRecv);
-    if (type==8 && message[0]=='\0') {
+    if (type==7) {
       //TODO Afficher la liste
-    } else {
-      printf("\nerreur : %s\n\n",message);
     }
   }
   return 0;
@@ -329,11 +323,11 @@ int demander_thematiques_suivies() {
 int twitter() {
 	printf("\nEcrivez votre tweet :\n");
 	char tweet[MAXLINE];
-	
+
 	fgets(tweet, MAXLINE, stdin);
-	
+
 	envoyer(3,tweet);
-	
+
 	int recv_size;
     if ((recv_size = recv(serverSocket, bufRecv, MAXLINE, 0)) >= 2) {
 		bufRecv[recv_size] = '\0';
@@ -412,7 +406,7 @@ int demande_connexion() {
       system("stty echo");
 
       if (name!=NULL && strlen(name)!=0) { //les données sont conformes
-          
+
           toSend = malloc(sizeof(char)*(strlen(name)+strlen(password)+2));
 
           strcpy(toSend,name);
@@ -462,7 +456,7 @@ void creer_compte() {
     	scanf("%140s",confmdp);
 
     	if (strcmp(mdp,confmdp)==0 && nomUtil!=NULL && strlen(nomUtil)!=0) { //les données sont conformes
-      		
+
       		toSend = malloc(sizeof(char)*(strlen(nomUtil)+strlen(mdp)+2));
 
       		strcpy(toSend,nomUtil);
@@ -484,7 +478,7 @@ void creer_compte() {
             }
       		}
 
-      		
+
       } else {
       		printf("\nVos données sont non conformes\n");
       }
@@ -513,7 +507,7 @@ int connexion(char *addIp, int port) {
 		perror("erreur socket");
 		exit(1);
 	}
-	
+
 	//on connecte la socket
 	if(connect(serverSocket,(struct sockaddr *) &serv_addr,sizeof(serv_addr))<0){
 		perror("erreur connect");
@@ -555,7 +549,7 @@ int menuPrincipal() {
   	}
 
   	return 0;
-  
+
 }
 
 
