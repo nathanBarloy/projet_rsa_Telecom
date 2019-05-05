@@ -41,3 +41,4 @@ serveur :
 * 6 : envoi liste utilisateurs qui vous suivent, liste des noms séparés par ','
 * 7 : envoi liste utilisateurs suivis, liste des noms séparés par ','
 * 8 : envoi liste thématiques suivies, liste des noms séparés par ','
+* 9 : envoi d'un tweet, chaine de caractères (140 max)

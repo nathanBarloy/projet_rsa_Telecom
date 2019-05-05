@@ -20,6 +20,7 @@
 #define LIST_FOLLOWED_USERS 6
 #define LIST_FOLLOWED_TAGS 7
 #define LIST_FOLLOWERS 8
+#define SHARE 9
 
 static int server_socket;
 static int client_sockets[FD_SETSIZE];
@@ -167,10 +168,83 @@ int sign_out(int index, char* message) {
 }
 
 int tweet(int index, char* message) {
-	if (client_users[index] == NULL) {
-		return response(client_sockets[index], TWEET, "User not signed in");
+	int client_socket = client_sockets[index];
+	char* client_user = client_users[index];
+	if (client_user == NULL) {
+		return response(client_socket, TWEET, "User not signed in");
 	}
-	printf("%s\n", message);
+	fd_set shares;
+	FD_ZERO(&shares);
+	char* home = getpwuid(getuid())->pw_dir;
+	int home_length = strlen(home);
+	int user_length = strlen(client_user);
+	int path_length = home_length + 13 + user_length;
+	char* path = malloc((path_length + 15) * sizeof(char));
+	strcpy(path, home);
+	strcpy(&path[home_length], "/.my-twitter/");
+	strcpy(&path[home_length + 13], client_user);
+	strcpy(&path[path_length], "/followers.txt");
+	FILE* stream = fopen(path, "r");
+	char line[141];
+	while (fscanf(stream, "%[^\n]\n", line) != EOF) {
+		for (int i = 0; i < FD_SETSIZE; i++) {
+			if (i != index) {
+				char* client_user = client_users[i];
+				if (client_user != NULL && !strcmp(client_user, line)) {
+					int client_socket = client_sockets[i];
+					FD_SET(client_socket, &shares);
+					response(client_socket, SHARE, message);
+				}
+			}
+		}
+	}
+	fclose(stream);
+	for (int i = 0; message[i] != '\0'; i++) {
+		if (message[i] == '#') {
+			int j = ++i;
+			while (
+				message[j] == '-' ||
+				(message[j] >= '0' && message[j] < ':') ||
+				(message[j] >= 'A' && message[j] < '[') ||
+				message[j] == '_' ||
+				(message[j] >= 'a' && message[j] < '{')
+			) {
+				j++;
+			}
+			if (j != i) {
+				char* tag = malloc((j - i + 1) * sizeof(char));
+				strncpy(tag, &message[i], (j - i) * sizeof(char));
+				tag[j - i] = '\0';
+				for (int k = 0; k < FD_SETSIZE; k++) {
+					if (k != index) {
+						char* client_user = client_users[k];
+						if (client_user != NULL) {
+							int client_socket = client_sockets[k];
+							if (!FD_ISSET(client_socket, &shares)) {
+								user_length = strlen(client_user);
+								path_length = home_length + 13 + user_length;
+								path = realloc(path, (path_length + 12) * sizeof(char));
+								strcpy(&path[home_length + 13], client_user);
+								strcpy(&path[path_length], "/tags.txt");
+								stream = fopen(path, "r");
+								while (fscanf(stream, "%[^\n]\n", line) != EOF) {
+									if (!strcmp(line, tag)) {
+										FD_SET(client_socket, &shares);
+										response(client_socket, SHARE, message);
+										break;
+									}
+								}
+								fclose(stream);
+							}
+						}
+					}
+				}
+				free(tag);
+				i = j;
+			}
+		}
+	}
+	free(path);
 	return response(client_sockets[index], TWEET, "");
 }
 
@@ -208,10 +282,7 @@ int follow_user(int index, char* message) {
 	strcpy(&path[path_length], "/users.txt");
 	stream = fopen(path, "a+");
 	char line[139];
-	for (;;) {
-		if (fscanf(stream, "%[^\n]\n", line) == EOF) {
-			break;
-		}
+	while (fscanf(stream, "%[^\n]\n", line) != EOF) {
 		if (!strcmp(line, message)) {
 			fclose(stream);
 			free(path);
@@ -253,10 +324,7 @@ int follow_tag(int index, char* message) {
 	FILE* stream = fopen(path, "a+");
 	free(path);
 	char line[141];
-	for (;;) {
-		if (fscanf(stream, "%[^\n]\n", line) == EOF) {
-			break;
-		}
+	while (fscanf(stream, "%[^\n]\n", line) != EOF) {
 		if (!strcmp(line, message)) {
 			fclose(stream);
 			return response(client_socket, FOLLOW_TAG, "Tag already followed");
