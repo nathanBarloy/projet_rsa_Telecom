@@ -52,9 +52,9 @@ Les messages envoyés par le client au serveur ou l'inverse ont un format simila
 - le dernier octet doit être nul ;
 - les octets médians sont non nuls et constituent l'information principale du message, dont l'interprétation diffère selon le type de message.
 
-Certains messages font intervenir des identifiants, noté `<id>`. Par identifiant, on entend une chaîne de caractères  alphanumériques *ASCII*, de caractères `_` ou de caractères `-`.
+Certains messages font intervenir des identifiants, notés `<id>`. Par identifiant, on entend une chaîne de caractères  alphanumériques *ASCII*, de caractères `_` ou de caractères `-`.
 
-À une requête de type `i` de la part du client doit suivre une réponse de même type `i` de la part du serveur, en guise d'acquittement, mais le serveur peut envoyer certains messages au client sans avoir reçu de demande de sa part (par exemple le type `9`).
+À une requête de type `i` de la part du client doit suivre une réponse de même type `i` de la part du serveur, en guise d'acquittement. En outre, le serveur peut envoyer au client des messages de type `2` ou `9` spontanément, c'est-à-dire sans avoir reçu de demande préalable de sa part.
 
 ### Format des messages du client au serveur
 
