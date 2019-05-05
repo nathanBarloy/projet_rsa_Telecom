@@ -1,4 +1,5 @@
 #include <pwd.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,6 +21,10 @@
 #define LIST_FOLLOWED_TAGS 7
 #define LIST_FOLLOWERS 8
 
+static int server_socket;
+static int client_sockets[FD_SETSIZE];
+static char* client_users[FD_SETSIZE];
+
 int test_identifier(char* string) {
 	for (int i = 0; string[i] != '\0'; i++) {
 		if (
@@ -34,12 +39,12 @@ int test_identifier(char* string) {
 	return 0;
 }
 
-int response(int socket, int type, char* message) {
+int response(int client_socket, int type, char* message) {
 	int send_size = (strlen(message) + 2) * sizeof(char);
 	char* send_buff = malloc(send_size);
 	send_buff[0] = type;
 	strcpy(&send_buff[1], message);
-	if (send(socket, send_buff, send_size, 0) >= 2) {
+	if (send(client_socket, send_buff, send_size, 0) >= 2) {
 		send_size = 0;
 	} else {
 		send_size = 1;
@@ -48,28 +53,28 @@ int response(int socket, int type, char* message) {
 	return send_size;
 }
 
-int sign_up(int sockets[], char* users[], int index, char* message) {
-	int socket = sockets[index];
-	if (users[index] != NULL) {
-		return response(socket, SIGN_UP, "User already signed in");
+int sign_up(int index, char* message) {
+	int client_socket = client_sockets[index];
+	if (client_users[index] != NULL) {
+		return response(client_socket, SIGN_UP, "User already signed in");
 	}
 	if (message[0] == '\0') {
-		return response(socket, SIGN_UP, "Neither user name nor password provided");
+		return response(client_socket, SIGN_UP, "Neither user name nor password provided");
 	}
 	if (message[0] == '@') {
-		return response(socket, SIGN_UP, "No user name provided");
+		return response(client_socket, SIGN_UP, "No user name provided");
 	}
 	char* password = strchr(message, '@');
 	if (password == NULL) {
-		return response(socket, SIGN_UP, "No password provided");
+		return response(client_socket, SIGN_UP, "No password provided");
 	}
 	password[0] = '\0';
 	password = &password[1];
 	if (test_identifier(message)) {
-		return response(socket, SIGN_UP, "Invalid user name");
+		return response(client_socket, SIGN_UP, "Invalid user name");
 	}
 	if (test_identifier(password)) {
-		return response(socket, SIGN_UP, "Invalid password");
+		return response(client_socket, SIGN_UP, "Invalid password");
 	}
 	char* home = getpwuid(getuid())->pw_dir;
 	int home_length = strlen(home);
@@ -82,7 +87,7 @@ int sign_up(int sockets[], char* users[], int index, char* message) {
 	strcpy(&path[home_length + 13], message);
 	if (!~mkdir(path, 0700)) {
 		free(path);
-		return response(socket, SIGN_UP, "User name not available");
+		return response(client_socket, SIGN_UP, "User name not available");
 	}
 	path[path_length] = '/';
 	strcpy(&path[path_length + 1], "password.txt");
@@ -96,33 +101,33 @@ int sign_up(int sockets[], char* users[], int index, char* message) {
 	strcpy(&path[path_length + 1], "followers.txt");
 	fclose(fopen(path, "w"));
 	free(path);
-	users[index] = malloc((message_length + 1) * sizeof(char));
-	strcpy(users[index], message);
-	return response(socket, SIGN_UP, "");
+	client_users[index] = malloc((message_length + 1) * sizeof(char));
+	strcpy(client_users[index], message);
+	return response(client_socket, SIGN_UP, "");
 }
 
-int sign_in(int sockets[], char* users[], int index, char* message) {
-	int socket = sockets[index];
-	if (users[index] != NULL) {
-		return response(socket, SIGN_IN, "User already signed in");
+int sign_in(int index, char* message) {
+	int client_socket = client_sockets[index];
+	if (client_users[index] != NULL) {
+		return response(client_socket, SIGN_IN, "User already signed in");
 	}
 	if (message[0] == '\0') {
-		return response(socket, SIGN_IN, "Neither user name nor password provided");
+		return response(client_socket, SIGN_IN, "Neither user name nor password provided");
 	}
 	if (message[0] == '@') {
-		return response(socket, SIGN_IN, "No user name provided");
+		return response(client_socket, SIGN_IN, "No user name provided");
 	}
 	char* password = strchr(message, '@');
 	if (password == NULL) {
-		return response(socket, SIGN_IN, "No password provided");
+		return response(client_socket, SIGN_IN, "No password provided");
 	}
 	password[0] = '\0';
 	password = &password[1];
 	if (test_identifier(message)) {
-		return response(socket, SIGN_IN, "Invalid user name");
+		return response(client_socket, SIGN_IN, "Invalid user name");
 	}
 	if (test_identifier(password)) {
-		return response(socket, SIGN_IN, "Invalid password");
+		return response(client_socket, SIGN_IN, "Invalid password");
 	}
 	char* home = getpwuid(getuid())->pw_dir;
 	int home_length = strlen(home);
@@ -134,52 +139,52 @@ int sign_in(int sockets[], char* users[], int index, char* message) {
 	strcpy(&path[home_length + 13], message);
 	strcpy(&path[path_length], "/password.txt");
 	FILE* stream = fopen(path, "r");
-	free(path);
 	if (stream == NULL) {
-		return response(socket, SIGN_IN, "Incorrect user name");
+		return response(client_socket, SIGN_IN, "Incorrect user name");
 	}
 	char line[139];
 	fscanf(stream, "%[^\n]\n", line);
 	fclose(stream);
+	free(path);
 	if (strcmp(line, password)) {
-		return response(socket, SIGN_IN, "Incorrect password");
+		return response(client_socket, SIGN_IN, "Incorrect password");
 	}
 	for (int i = 0; i < FD_SETSIZE; i++) {
-		char* user = users[i];
-		if (user != NULL) {
-			if (!strcmp(user, message)) {
-				return response(socket, SIGN_IN, "User already signed in elsewhere");
+		char* client_user = client_users[i];
+		if (client_user != NULL) {
+			if (!strcmp(client_user, message)) {
+				return response(client_socket, SIGN_IN, "User already signed in elsewhere");
 			}
 		}
 	}
-	users[index] = malloc((message_length + 1) * sizeof(char));
-	strcpy(users[index], message);
-	return response(socket, SIGN_IN, "");
+	client_users[index] = malloc((message_length + 1) * sizeof(char));
+	strcpy(client_users[index], message);
+	return response(client_socket, SIGN_IN, "");
 }
 
-int sign_out(int sockets[], char* users[], int index, char* message) {
-	return response(sockets[index], SIGN_OUT, "") || 1;
+int sign_out(int index, char* message) {
+	return response(client_sockets[index], SIGN_OUT, "") || 1;
 }
 
-int tweet(int sockets[], char* users[], int index, char* message) {
-	if (users[index] == NULL) {
-		return response(sockets[index], TWEET, "User not signed in");
+int tweet(int index, char* message) {
+	if (client_users[index] == NULL) {
+		return response(client_sockets[index], TWEET, "User not signed in");
 	}
 	printf("%s\n", message);
-	return response(sockets[index], TWEET, "");
+	return response(client_sockets[index], TWEET, "");
 }
 
-int follow_user(int sockets[], char* users[], int index, char* message) {
-	int socket = sockets[index];
-	char* user = users[index];
-	if (user == NULL) {
-		return response(socket, FOLLOW_USER, "User not signed in");
+int follow_user(int index, char* message) {
+	int client_socket = client_sockets[index];
+	char* client_user = client_users[index];
+	if (client_user == NULL) {
+		return response(client_socket, FOLLOW_USER, "User not signed in");
 	}
 	if (test_identifier(message)) {
-		return response(socket, FOLLOW_USER, "Invalid user name");
+		return response(client_socket, FOLLOW_USER, "Invalid user name");
 	}
-	if (!strcmp(message, user)) {
-		return response(socket, FOLLOW_USER, "User is you");
+	if (!strcmp(message, client_user)) {
+		return response(client_socket, FOLLOW_USER, "User is you");
 	}
 	char* home = getpwuid(getuid())->pw_dir;
 	int home_length = strlen(home);
@@ -193,13 +198,13 @@ int follow_user(int sockets[], char* users[], int index, char* message) {
 	FILE* stream = fopen(path, "r");
 	if (stream == NULL) {
 		free(path);
-		return response(socket, FOLLOW_USER, "Incorrect user name");
+		return response(client_socket, FOLLOW_USER, "Incorrect user name");
 	}
 	fclose(stream);
-	user_length = strlen(user);
+	user_length = strlen(client_user);
 	path_length = home_length + 13 + user_length;
 	path = realloc(path, (path_length + 11) * sizeof(char));
-	strcpy(&path[home_length + 13], user);
+	strcpy(&path[home_length + 13], client_user);
 	strcpy(&path[path_length], "/users.txt");
 	stream = fopen(path, "a+");
 	char line[139];
@@ -210,7 +215,7 @@ int follow_user(int sockets[], char* users[], int index, char* message) {
 		if (!strcmp(line, message)) {
 			fclose(stream);
 			free(path);
-			return response(socket, FOLLOW_USER, "User already followed");
+			return response(client_socket, FOLLOW_USER, "User already followed");
 		}
 	}
 	fprintf(stream, "%s\n", message);
@@ -221,29 +226,29 @@ int follow_user(int sockets[], char* users[], int index, char* message) {
 	strcpy(&path[home_length + 13], message);
 	strcpy(&path[path_length], "/followers.txt");
 	stream = fopen(path, "a");
-	fprintf(stream, "%s\n", user);
+	fprintf(stream, "%s\n", client_user);
 	fclose(stream);
 	free(path);
-	return response(socket, FOLLOW_USER, "");
+	return response(client_socket, FOLLOW_USER, "");
 }
 
-int follow_tag(int sockets[], char* users[], int index, char* message) {
-	int socket = sockets[index];
-	char* user = users[index];
-	if (user == NULL) {
-		return response(socket, FOLLOW_TAG, "User not signed in");
+int follow_tag(int index, char* message) {
+	int client_socket = client_sockets[index];
+	char* client_user = client_users[index];
+	if (client_user == NULL) {
+		return response(client_socket, FOLLOW_TAG, "User not signed in");
 	}
 	if (test_identifier(message)) {
-		return response(socket, FOLLOW_TAG, "Invalid tag");
+		return response(client_socket, FOLLOW_TAG, "Invalid tag");
 	}
 	char* home = getpwuid(getuid())->pw_dir;
 	int home_length = strlen(home);
-	int user_length = strlen(user);
+	int user_length = strlen(client_user);
 	int path_length = home_length + 13 + user_length;
 	char* path = malloc((path_length + 12) * sizeof(char));
 	strcpy(path, home);
 	strcpy(&path[home_length], "/.my-twitter/");
-	strcpy(&path[home_length + 13], user);
+	strcpy(&path[home_length + 13], client_user);
 	strcpy(&path[path_length], "/tags.txt");
 	FILE* stream = fopen(path, "a+");
 	free(path);
@@ -254,77 +259,77 @@ int follow_tag(int sockets[], char* users[], int index, char* message) {
 		}
 		if (!strcmp(line, message)) {
 			fclose(stream);
-			return response(socket, FOLLOW_TAG, "Tag already followed");
+			return response(client_socket, FOLLOW_TAG, "Tag already followed");
 		}
 	}
 	fprintf(stream, "%s\n", message);
 	fclose(stream);
-	return response(socket, FOLLOW_TAG, "");
+	return response(client_socket, FOLLOW_TAG, "");
 }
 
-int list_followed_users(int sockets[], char* users[], int index, char* message) {
-	if (users[index] == NULL) {
-		return response(sockets[index], LIST_FOLLOWED_USERS, "User not signed in");
+int list_followed_users(int index, char* message) {
+	if (client_users[index] == NULL) {
+		return response(client_sockets[index], LIST_FOLLOWED_USERS, "User not signed in");
 	}
 	return 0;
 }
 
-int list_followed_tags(int sockets[], char* users[], int index, char* message) {
-	if (users[index] == NULL) {
-		return response(sockets[index], LIST_FOLLOWED_TAGS, "User not signed in");
+int list_followed_tags(int index, char* message) {
+	if (client_users[index] == NULL) {
+		return response(client_sockets[index], LIST_FOLLOWED_TAGS, "User not signed in");
 	}
 	return 0;
 }
 
-int list_followers(int sockets[], char* users[], int index, char* message) {
-	if (users[index] == NULL) {
-		return response(sockets[index], LIST_FOLLOWERS, "User not signed in");
+int list_followers(int index, char* message) {
+	if (client_users[index] == NULL) {
+		return response(client_sockets[index], LIST_FOLLOWERS, "User not signed in");
 	}
 	return 0;
 }
 
-int request(int sockets[], char* users[], int index) {
+int request(int index) {
 	int recv_size = (LENGTH + 2) * sizeof(char);
 	char* recv_buff = malloc(recv_size);
-	if ((recv_size = recv(sockets[index], recv_buff, recv_size, 0)) >= 2) {
+	if ((recv_size = recv(client_sockets[index], recv_buff, recv_size, 0)) >= 2) {
 		recv_buff[recv_size] = '\0';
 		int type = recv_buff[0];
 		char* message = &recv_buff[1];
 		switch (type) {
 			case SIGN_UP: {
-				recv_size = sign_up(sockets, users, index, message);
+				recv_size = sign_up(index, message);
 				break;
 			}
 			case SIGN_IN: {
-				recv_size = sign_in(sockets, users, index, message);
+				recv_size = sign_in(index, message);
 				break;
 			}
 			case SIGN_OUT: {
-				recv_size = sign_out(sockets, users, index, message);
+				recv_size = sign_out(index, message);
 				break;
 			}
 			case TWEET: {
-				recv_size = tweet(sockets, users, index, message);
+				recv_size = tweet(index, message);
 				break;
 			}
 			case FOLLOW_USER: {
-				recv_size = follow_user(sockets, users, index, message);
+				recv_size = follow_user(index, message);
 				break;
 			}
 			case FOLLOW_TAG: {
-				recv_size = follow_tag(sockets, users, index, message);
+				recv_size = follow_tag(index, message);
 				break;
 			}
 			case LIST_FOLLOWED_USERS: {
-				recv_size = list_followed_users(sockets, users, index, message);
+				recv_size = list_followed_users(index, message);
 				break;
 			}
 			case LIST_FOLLOWED_TAGS: {
-				recv_size = list_followed_tags(sockets, users, index, message);
+				recv_size = list_followed_tags(index, message);
 				break;
 			}
 			case LIST_FOLLOWERS: {
-				recv_size = list_followers(sockets, users, index, message);
+				recv_size = list_followers(index, message);
 				break;
 			}
 			default: {
@@ -338,11 +343,40 @@ int request(int sockets[], char* users[], int index) {
 	return recv_size;
 }
 
+void stop(int signal) {
+	if (server_socket != -1) {
+		for (int i = 0; i < FD_SETSIZE; i++) {
+			char* client_user = client_users[i];
+			if (client_user != NULL) {
+				free(client_user);
+			}
+			int client_socket = client_sockets[i];
+			if (client_socket != -1) {
+				response(client_socket, SIGN_OUT, "");
+				printf("Déconnexion client (socket %d)\n", client_socket);
+				close(client_socket);
+			}
+		}
+		close(server_socket);
+	}
+	exit(0);
+}
+
 int main(int argc, char* argv[]) {
+	server_socket = -1;
+	for (int i = 0; i < FD_SETSIZE; i++) {
+		client_sockets[i] = -1;
+		client_users[i] = NULL;
+	}
+	struct sigaction new;
+	struct sigaction old;
+	memset(&new, 0, sizeof(struct sigaction));
+	new.sa_handler = &stop;
+	sigaction(SIGINT, &new, &old);
 	/* Création d'une socket */
-	int server_socket;
 	if (!~(server_socket = socket(PF_INET, SOCK_STREAM, 0))) {
 		perror("Server echo: socket error\n");
+		stop(SIGINT);
 		return 1;
 	}
 	socklen_t address_size = sizeof(struct sockaddr_in);
@@ -354,18 +388,14 @@ int main(int argc, char* argv[]) {
 	server_address.sin_port = htons(PORT);
 	if (!~bind(server_socket, (struct sockaddr*) &server_address, address_size)) {
 		perror("Server echo: bind error\n");
+		stop(SIGINT);
 		return 2;
 	}
 	/* Ouverture du service */
 	if (!~listen(server_socket, SOMAXCONN)) {
 		perror("Server echo: listen error\n");
+		stop(SIGINT);
 		return 3;
-	}
-	int client_sockets[FD_SETSIZE];
-	char* client_users[FD_SETSIZE];
-	for (int i = 0; i < FD_SETSIZE; i++) {
-		client_sockets[i] = -1;
-		client_users[i] = NULL;
 	}
 	int client_socket;
 	struct sockaddr_in client_address;
@@ -382,11 +412,13 @@ int main(int argc, char* argv[]) {
 		/* Création des sockets de dialogue */
 		if (!~(socket_count = select(socket_max, &current_sockets, NULL, NULL, NULL))) {
 			perror("Server echo: select error\n");
+			stop(SIGINT);
 			return 4;
 		}
 		if (FD_ISSET(server_socket, &current_sockets)) {
 			if (!~(client_socket = accept(server_socket, (struct sockaddr*) &client_address, &address_size))) {
 				perror("Server echo: accept error\n");
+				stop(SIGINT);
 				return 5;
 			}
 			socket_index = -1;
@@ -406,7 +438,7 @@ int main(int argc, char* argv[]) {
 		socket_index = 0;
 		while (socket_count > 0 && socket_index < FD_SETSIZE) {
 			if (~(client_socket = client_sockets[socket_index]) && FD_ISSET(client_socket, &current_sockets)) {
-				if (request(client_sockets, client_users, socket_index)) {
+				if (request(socket_index)) {
 					printf("Déconnexion client (socket %d)\n", client_socket);
 					client_sockets[socket_index] = -1;
 					if (client_users[socket_index] != NULL) {
