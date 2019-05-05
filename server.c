@@ -232,6 +232,9 @@ int follow_user(int index, char* message) {
 	if (client_user == NULL) {
 		return response(client_socket, FOLLOW_USER, "User not signed in");
 	}
+	if (message[0] == '\0') {
+		return response(client_socket, FOLLOW_USER, "No user name provided");
+	}
 	if (test_identifier(message)) {
 		return response(client_socket, FOLLOW_USER, "Invalid user name");
 	}
@@ -274,8 +277,11 @@ int follow_tag(int index, char* message) {
 	if (client_user == NULL) {
 		return response(client_socket, FOLLOW_TAG, "User not signed in");
 	}
+	if (message[0] == '\0') {
+		return response(client_socket, FOLLOW_TAG, "No tag name provided");
+	}
 	if (test_identifier(message)) {
-		return response(client_socket, FOLLOW_TAG, "Invalid tag");
+		return response(client_socket, FOLLOW_TAG, "Invalid tag name");
 	}
 	int user_length = base_length + strlen(client_user);
 	strcpy(&path[base_length], client_user);
