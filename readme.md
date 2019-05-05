@@ -62,7 +62,7 @@ On dispose dans cette version de `9` types de messages différents :
 
 - `0` (demande de création de compte) : les octets médians sont interprétés comme une chaîne de caractères et doivent respecter le format `<username>@<password>`, où `<username>` est un `<id>` (non vide) représentant le nom d'utilisateur et `<password>` un `<id>` (possiblement vide) représentant le mot de passe ;
 - `1` (demande d'authentification) : même format que pour le type `0` ;
-- `2` (demande de déconnexion) : les octets médians sont ignorés ;
+- `2` (demande de déconnexion) : le nombre d'octets médians doit être `0` ;
 - `3` (envoi de *tweet*) : les octets médians sont interprétés comme une chaîne de caractères représentant le contenu du *tweet*, dont chaque sous-chaîne de la forme `#<tag>`, où `<tag>` est un `<id>` (non vide et de taille maximale), représente une citation de la thématique de nom `<tag>` ;
 - `4` (demande de suivi d'utilisateur) : les octets médians sont interprétés comme une chaîne de caractères et doivent respecter le format `<username>`, où `<username>` est un `<id>` (non vide) représentant un nom d'utilisateur ;
 - `5` (demande de suivi de thématique) : les octets médians sont interprétés comme une chaîne de caractères et doivent respecter le format `<tag>` où `<tag>` est un `<id>` (non vide) représentant un nom de thématique ;
@@ -78,7 +78,7 @@ On dispose dans cette version de `10` types de messages différents :
 
 - `0` (acquittement de demande de création de compte) : le nombre d'octets médians doit être `0` si et seulement si la création de compte est désormais effective ;
 - `1` (acquittement de demande d'authentification) : le nombre d'octets médians doit être `0` si et seulement si l'authentification est désormais effective ;
-- `2` (notification de déconnexion) : le nombre d'octets médians doit être `0` si et seulement si la déconnexion est désormais effective ;
+- `2` (notification de déconnexion) : le nombre d'octets médians doit être `0` ;
 - `3` (acquittement d'envoi de *tweet*) : le nombre d'octets médians doit être `0` si et seulement si l'envoi de *tweet* est permis ;
 - `4` (acquittement de demande de suivi d'utilisateur) : le nombre d'octets médians doit être `0` si et seulement si le suivi est désormais effectif ;
 - `5` (acquittement de demande de suivi de thématique) : même format que pour le type `4` ;
